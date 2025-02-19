@@ -1,0 +1,71 @@
+.attendanceMarking__container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.attendanceMarking__sidebar {
+    width: 250px;
+    background-color: #f8f9fa;
+    flex-shrink: 0; /* Prevent shrinking */
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+}
+
+.attendanceMarking__content {
+    flex-grow: 1;
+    padding: 20px;
+    margin-left: 150px; /* Push content next to sidebar */
+    width: calc(100% - 250px);
+}
+
+.attendance__controls {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+}
+
+.attendance__controls select,
+.attendance__controls button {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.camera__section {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.camera__btn {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.camera__btn:hover {
+    background-color: #0056b3;
+}
+
+.camera__box {
+    margin-top: 15px;
+    width: 100%;
+    max-width: 600px;
+    height: 350px;
+    background-color: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #aaa;
+    border-radius: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}

@@ -1,0 +1,75 @@
+/* Apply modern glassmorphism effect */
+.header {
+    backdrop-filter: blur(12px);
+    background: rgba(15, 0, 66, 0.9); /* Dark blue with transparency */
+    padding: 12px 0;
+    box-shadow: 0 4px 10px rgba(0, 9, 68, 0.3);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle white border */
+    margin-bottom: 100px; /* Creates space below header */
+}
+
+/* Add spacing to the content below */
+body {
+    padding-top: 100px; /* Adjust to ensure no overlap with fixed navbar */
+}
+
+/* Custom navbar style */
+.navbar {
+    background: transparent !important;
+    padding: 12px 20px;
+}
+
+/* Brand styling */
+.brand {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff !important; /* White */
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 4px rgba(255, 255, 255, 0.3); /* Soft glow */
+}
+
+/* Navbar links */
+.nav-link {
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9) !important;
+    margin: 0 12px;
+    transition: all 0.3s ease-in-out;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Hover effects */
+.nav-link:hover {
+    color: #ff3b3b !important; /* Red hover effect */
+    text-decoration: none;
+    transform: scale(1.1);
+}
+
+/* Active link styling */
+.nav-link.active {
+    color: #ff3b3b !important;
+    font-weight: 600;
+}
+
+/* Responsive toggle button */
+.navbar-toggler {
+    border: none;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 8px 16px;
+    }
+    .nav-link {
+        font-size: 14px;
+        margin: 6px 0;
+    }
+}
+  
