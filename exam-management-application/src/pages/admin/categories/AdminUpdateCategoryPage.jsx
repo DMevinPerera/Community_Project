@@ -1,51 +1,57 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import "./AdminUpdateCategoryPage.css";
 import { Button, Form } from "react-bootstrap";
 import swal from "sweetalert";
-import { useParams, useNavigate } from "react-router-dom";
 import FormContainer from "../../../components/FormContainer";
 import Sidebar from "../../../components/Sidebar";
+import { db } from "../../../config/firebase";
+import { doc, getDoc, updateDoc} from "firebase/firestore";
+
 
 const AdminUpdateCategoryPage = () => {
-  const navigate = useNavigate();
+ 
   const params = useParams();
-  const catId = params.catId;
+  const navigate = useNavigate();
+  const { catId } = useParams();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  
 
-  // Simulate categories data in local state
-  const [categories, setCategories] = useState([
-    { catId: 1, title: "Category 1", description: "Description of Category 1" },
-    { catId: 2, title: "Category 2", description: "Description of Category 2" },
-  ]);
+ 
+
+
+  // useEffect(() => {
+  //   if (!oldCategory) {
+  //     swal("Category Not Found", "This category does not exist.", "error");
+  //     navigate("/adminCategories");
+  //   }
+  // }, [oldCategory, navigate]);
+
   
-  // Find the category to be updated
-  const oldCategory = categories.find((cat) => cat.catId == catId);
+
+
   
-  const [title, setTitle] = useState(oldCategory ? oldCategory.title : "");
-  const [description, setDescription] = useState(
-    oldCategory ? oldCategory.description : ""
-  );
 
   useEffect(() => {
-    if (!oldCategory) {
-      swal("Category Not Found", "This category does not exist.", "error");
-      navigate("/adminCategories");
-    }
-  }, [oldCategory, navigate]);
+    const fetchCategory = async () => {
+      const docRef = doc(db, "categories", catId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setTitle(docSnap.data().title);
+        setDescription(docSnap.data().description);
+      } else {
+        swal("Error", "Category not found", "error");
+        navigate("/adminCategories");
+      }
+    };
+    fetchCategory();
+  }, [catId, navigate]);
 
-  const submitHandler = (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault();
-
-    // Simulate category update
-    const updatedCategory = { catId, title, description };
-    
-    // Update the category in the state
-    setCategories((prevCategories) =>
-      prevCategories.map((cat) =>
-        cat.catId === catId ? updatedCategory : cat
-      )
-    );
-
-    swal("Category Updated!", `${title} successfully updated`, "success");
+    await updateDoc(doc(db, "categories", catId), { title, description });
+    swal("Updated!", "Category updated successfully", "success");
     navigate("/adminCategories");
   };
 

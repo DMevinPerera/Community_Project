@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import Sidebar from "../../../components/Sidebar";
 import FormContainer from "../../../components/FormContainer";
 import swal from "sweetalert";
+import { db } from "../../../config/firebase"; // Assuming you have this setup correctly
+import { doc, getDoc, updateDoc } from "firebase/firestore"; // Firestore imports
 import "./AdminUpdateQuiz.css";
 
 const AdminUpdateQuiz = () => {
@@ -11,11 +13,11 @@ const AdminUpdateQuiz = () => {
   const params = useParams();
   const quizId = params.quizId;
 
-  // Sample quiz data to replace backend API calls
+  // Local state to store quiz data
   const [oldQuiz, setOldQuiz] = useState({
     quizId: quizId,
-    title: "Math Quiz",
-    description: "Basic Math Quiz",
+    title: "",
+    description: "",
     maxMarks: 50,
     numberOfQuestions: 5,
     isActive: true,
@@ -44,7 +46,7 @@ const AdminUpdateQuiz = () => {
     setSelectedCategoryId(e.target.value);
   };
 
-  const submitHandler = (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault();
     if (selectedCategoryId !== null && selectedCategoryId !== "n/a") {
       const updatedQuiz = {
@@ -54,19 +56,71 @@ const AdminUpdateQuiz = () => {
         isActive: isActive,
         category: categories.find((cat) => cat.catId == selectedCategoryId),
       };
-      swal("Quiz Updated!", `${updatedQuiz.title} successfully updated`, "success");
-      console.log("Updated Quiz: ", updatedQuiz);
-      // Here, you can handle the updated quiz (e.g., save it locally or simulate a backend update)
+
+      try {
+        // Reference to the quiz document in Firestore
+        const quizRef = doc(db, "quizzes", quizId);
+
+        // Update the quiz document in Firestore
+        await updateDoc(quizRef, {
+          title: updatedQuiz.title,
+          description: updatedQuiz.description,
+          isActive: updatedQuiz.isActive,
+          category: updatedQuiz.category,
+        });
+
+        swal("Quiz Updated!", `${updatedQuiz.title} successfully updated`, "success");
+        console.log("Updated Quiz: ", updatedQuiz);
+        // You can navigate back to the quiz list or another page here
+        navigate("/adminQuizzes");
+      } catch (error) {
+        swal("Error", "Failed to update quiz", "error");
+        console.error("Error updating quiz: ", error);
+      }
     } else {
       swal("Error", "Please select a valid category!", "error");
     }
   };
 
   useEffect(() => {
-    // If there's a need to fetch the quiz details or categories (simulated here)
-    // Normally, you'd fetch quiz details based on the quizId and categories data
-  }, []);
-
+    // Fetch quiz details from Firestore when component mounts
+    const fetchQuizDetails = async () => {
+      try {
+        const quizDocRef = doc(db, "quizzes", quizId);
+        const quizDoc = await getDoc(quizDocRef);
+  
+        if (quizDoc.exists()) {
+          const quizData = quizDoc.data();
+  
+          // Check if category exists, otherwise assign a default value
+          const categoryData = quizData.category ? quizData.category : { catId: "", title: "Uncategorized" };
+  
+          setOldQuiz({
+            quizId: quizDoc.id,
+            title: quizData.title || "",
+            description: quizData.description || "",
+            maxMarks: quizData.maxMarks || 50,
+            numberOfQuestions: quizData.numberOfQuestions || 5,
+            isActive: quizData.isActive ?? true,
+            category: categoryData, // Ensure category is always defined
+          });
+  
+          setTitle(quizData.title || "");
+          setDescription(quizData.description || "");
+          setIsActive(quizData.isActive ?? true);
+          setSelectedCategoryId(categoryData.catId || "n/a"); // Default if missing
+        } else {
+          swal("Error", "Quiz not found!", "error");
+        }
+      } catch (error) {
+        swal("Error", "Failed to fetch quiz details", "error");
+        console.error("Error fetching quiz details: ", error);
+      }
+    };
+  
+    fetchQuizDetails();
+  }, [quizId]);
+  
   return (
     <div className="adminUpdateQuizPage__container">
       <div className="adminUpdateQuizPage__sidebar">

@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import "./AdminAddQuiz.css";
 import Sidebar from "../../../components/Sidebar";
 import FormContainer from "../../../components/FormContainer";
+import { db } from "../../../config/firebase"; 
+import { collection, addDoc, getDocs } from "firebase/firestore";
 
 const AdminAddQuiz = () => {
   const [title, setTitle] = useState("");
@@ -11,11 +13,26 @@ const AdminAddQuiz = () => {
   const [isActive, setIsActive] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
-  const categories = [
-    { catId: 1, title: "Science" },
-    { catId: 2, title: "Math" },
-    { catId: 3, title: "History" },
-  ];
+  
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const querySnapshot = await getDocs(collection(db, "categories"));
+      const fetchedCategories = querySnapshot.docs.map(doc => ({
+        catId: doc.id,
+        title: doc.data().title,
+      }));
+      setCategories(fetchedCategories);
+    };
+  
+    fetchCategories();
+  }, []);
+  // const categories = [
+  //   { catId: 1, title: "Science" },
+  //   { catId: 2, title: "Math" },
+  //   { catId: 3, title: "History" },
+  // ];
 
   const navigate = useNavigate();
 
@@ -27,17 +44,24 @@ const AdminAddQuiz = () => {
     setSelectedCategoryId(e.target.value);
   };
 
-  const submitHandler = (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault();
     if (selectedCategoryId !== null && selectedCategoryId !== "n/a") {
       const quiz = {
         title: title,
         description: description,
         isActive: isActive,
-        category: categories.filter((cat) => cat.catId == selectedCategoryId)[0],
+        categoryId: selectedCategoryId,
       };
-      console.log("Quiz Created:", quiz);
-      alert("Quiz created successfully!");
+      
+      try {
+        const docRef = await addDoc(collection(db, "quizzes"), quiz);
+        console.log("Quiz Created with ID: ", docRef.id);
+        alert("Quiz created successfully!");
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        alert("Error creating quiz!");
+      }
     } else {
       alert("Select valid category!");
     }
