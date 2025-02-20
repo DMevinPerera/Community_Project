@@ -46,26 +46,35 @@ const AdminAddQuiz = () => {
 
   const submitHandler = async (e) => {
     e.preventDefault();
+    
     if (selectedCategoryId !== null && selectedCategoryId !== "n/a") {
       const quiz = {
-        title: title,
-        description: description,
-        isActive: isActive,
-        categoryId: selectedCategoryId,
+        title,
+        description,
+        isActive,
       };
-      
+  
       try {
-        const docRef = await addDoc(collection(db, "quizzes"), quiz);
+        // 🔥 Store quiz inside the selected category's `quizzes` sub-collection
+        const docRef = await addDoc(collection(db, "categories", selectedCategoryId, "quizzes"), quiz);
+        
         console.log("Quiz Created with ID: ", docRef.id);
         alert("Quiz created successfully!");
+  
+        // Clear form after submission
+        setTitle("");
+        setDescription("");
+        setIsActive(false);
+        setSelectedCategoryId(null);
       } catch (e) {
         console.error("Error adding document: ", e);
         alert("Error creating quiz!");
       }
     } else {
-      alert("Select valid category!");
+      alert("Select a valid category!");
     }
   };
+  
 
   return (
     <div className="adminAddQuizPage__container">

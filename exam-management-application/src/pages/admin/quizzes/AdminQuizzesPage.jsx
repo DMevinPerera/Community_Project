@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Button, ListGroup } from "react-bootstrap";
+import { Button, ListGroup, Form } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, doc, getDoc, deleteDoc } from "firebase/firestore";
-import { db } from "../../../config/firebase"; // Assuming Firebase setup in firebase.js
+import { collection, getDocs, doc, deleteDoc } from "firebase/firestore";
+import { db } from "../../../config/firebase";
 import "./AdminQuizzesPage.css";
 import Sidebar from "../../../components/Sidebar";
 import Message from "../../../components/Message";
@@ -10,29 +10,35 @@ import Message from "../../../components/Message";
 const AdminQuizzesPage = () => {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(""); // Default: Show all
   const [loading, setLoading] = useState(true);
 
-  // Fetch quizzes from Firestore
+  // Fetch categories & quizzes
   useEffect(() => {
-    const fetchQuizzes = async () => {
+    const fetchData = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "quizzes"));
-        const fetchedQuizzes = await Promise.all(
-          querySnapshot.docs.map(async (quizDoc) => { // Renamed `doc` to `quizDoc`
-            const quizData = { quizId: quizDoc.id, ...quizDoc.data() };
-  
-            // Fetch category details using categoryId
-            if (quizData.categoryId) {
-              const categoryRef = doc(db, "categories", quizData.categoryId);
-              const categorySnap = await getDoc(categoryRef);
-              quizData.category = categorySnap.exists() ? categorySnap.data() : null;
-            }
-  
-            return quizData;
-          })
-        );
-  
-        // console.log("Fetched Quizzes:", fetchedQuizzes); // Debugging log
+        const categoriesSnapshot = await getDocs(collection(db, "categories"));
+        const fetchedCategories = [];
+        let fetchedQuizzes = [];
+
+        for (const categoryDoc of categoriesSnapshot.docs) {
+          const categoryId = categoryDoc.id;
+          const categoryData = categoryDoc.data();
+          fetchedCategories.push({ catId: categoryId, title: categoryData.title });
+
+          const quizzesSnapshot = await getDocs(collection(db, "categories", categoryId, "quizzes"));
+          quizzesSnapshot.forEach((quizDoc) => {
+            fetchedQuizzes.push({
+              quizId: quizDoc.id,
+              categoryId,
+              category: categoryData,
+              ...quizDoc.data(),
+            });
+          });
+        }
+
+        setCategories(fetchedCategories);
         setQuizzes(fetchedQuizzes);
         setLoading(false);
       } catch (error) {
@@ -40,22 +46,17 @@ const AdminQuizzesPage = () => {
         setLoading(false);
       }
     };
-  
-    fetchQuizzes();
-  }, []);
-  
 
-  const addNewQuizHandler = () => {
-    navigate("/adminAddQuiz");
-  };
+    fetchData();
+  }, []);
 
   const deleteQuizHandler = async (quiz) => {
     try {
-      const quizRef = doc(db, "quizzes", quiz.quizId); // Reference the document
-      await deleteDoc(quizRef); // Delete the document
+      const quizRef = doc(db, "categories", quiz.categoryId, "quizzes", quiz.quizId);
+      await deleteDoc(quizRef);
       alert(`${quiz.title} successfully deleted`);
-  
-      // Update the state to remove the deleted quiz
+
+      // Remove from UI
       setQuizzes((prevQuizzes) => prevQuizzes.filter(q => q.quizId !== quiz.quizId));
     } catch (e) {
       console.error("Error deleting quiz: ", e);
@@ -63,13 +64,9 @@ const AdminQuizzesPage = () => {
     }
   };
 
-  const updateQuizHandler = (quizId) => {
-    navigate(`/adminUpdateQuiz/${quizId}`);
-  };
-
-  const questionsHandler = (quizId, quizTitle) => {
-    navigate(`/adminQuestions/?quizId=${quizId}&quizTitle=${quizTitle}`);
-  };
+  const filteredQuizzes = selectedCategory
+    ? quizzes.filter((quiz) => quiz.categoryId === selectedCategory)
+    : quizzes; // Show all if no category selected
 
   return (
     <div className="adminQuizzesPage__container">
@@ -78,68 +75,55 @@ const AdminQuizzesPage = () => {
       </div>
       <div className="adminQuizzesPage__content">
         <h2>Quizzes</h2>
+
+        {/* Category Filter */}
+        <Form.Select
+          className="my-3"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categories.map((cat) => (
+            <option key={cat.catId} value={cat.catId}>
+              {cat.title}
+            </option>
+          ))}
+        </Form.Select>
+
         {loading ? (
           <div>Loading quizzes...</div>
-        ) : quizzes.length === 0 ? (
-          <Message>No quizzes are present. Try adding some quizzes.</Message>
+        ) : filteredQuizzes.length === 0 ? (
+          <Message>No quizzes found for this category.</Message>
         ) : (
-          quizzes.map((quiz, index) => {
-            // Log the quiz object to check its structure
-            console.log(quiz);
-
-            // Check if quiz data is valid before accessing properties
-            if (!quiz || !quiz.title || !quiz.category || !quiz.category.title) {
-              return null; // Skip rendering this quiz if it's malformed
-            }
-            return (
-              <ListGroup
-                className="adminQuizzesPage__content--quizzesList"
-                key={index}
-              >
-                <ListGroup.Item className="align-items-start" action>
-                  <div className="ms-2 me-auto">
-                    <div className="fw-bold">{quiz.title}</div>
-                    <p style={{ color: "grey" }}>
-                      {quiz.category ? quiz.category.title : "Unknown Category"}
-                    </p>
-                    <p className="my-3">{quiz.description}</p>
-                    <div className="adminQuizzesPage__content--ButtonsList">
-                      <div
-                        onClick={() => questionsHandler(quiz.quizId, quiz.title)}
-                        style={buttonStyle("rgb(68 177 49)", "Questions")}
-                      >
-                        Questions
-                      </div>
-                      <div style={buttonStyle()}>
-                        {`Marks : ${quiz.numOfQuestions * 5}`}
-                      </div>
-                      <div style={buttonStyle()}>
-                        {`${quiz.numOfQuestions} Questions`}
-                      </div>
-                      <div
-                        onClick={() => updateQuizHandler(quiz.quizId)}
-                        style={buttonStyle("rgb(68 177 49)", "Update")}
-                      >
-                        Update
-                      </div>
-                      <div
-                        onClick={() => deleteQuizHandler(quiz)}
-                        style={buttonStyle("#ff0b0bdb", "Delete")}
-                      >
-                        Delete
-                      </div>
+          filteredQuizzes.map((quiz) => (
+            <ListGroup key={quiz.quizId} className="adminQuizzesPage__content--quizzesList">
+              <ListGroup.Item className="align-items-start" action>
+                <div className="ms-2 me-auto">
+                  <div className="fw-bold">{quiz.title}</div>
+                  <p style={{ color: "grey" }}>{quiz.category.title}</p>
+                  <p className="my-3">{quiz.description}</p>
+                  <div className="adminQuizzesPage__content--ButtonsList">
+                  <div
+  onClick={() => navigate(`/adminQuestions/?quizId=${quiz.quizId}&categoryId=${quiz.categoryId}&quizTitle=${quiz.title}`)}
+  style={buttonStyle("rgb(68 177 49)")}
+>
+  Questions
+</div>
+                    <div style={buttonStyle()}>{`Marks : ${quiz.numOfQuestions * 5}`}</div>
+                    <div style={buttonStyle()}>{`${quiz.numOfQuestions} Questions`}</div>
+                    <div onClick={() => navigate(`/adminUpdateQuiz/${quiz.quizId}`)} style={buttonStyle("rgb(68 177 49)")}>
+                      Update
+                    </div>
+                    <div onClick={() => deleteQuizHandler(quiz)} style={buttonStyle("#ff0b0bdb")}>
+                      Delete
                     </div>
                   </div>
-                </ListGroup.Item>
-              </ListGroup>
-            );
-          })
+                </div>
+              </ListGroup.Item>
+            </ListGroup>
+          ))
         )}
-        <Button
-          variant=""
-          className="adminQuizzesPage__content--button"
-          onClick={addNewQuizHandler}
-        >
+        <Button variant="" className="adminQuizzesPage__content--button" onClick={() => navigate("/adminAddQuiz")}>
           Add Quiz
         </Button>
       </div>
@@ -147,11 +131,10 @@ const AdminQuizzesPage = () => {
   );
 };
 
-const buttonStyle = (bgColor = "grey", text = "") => ({
+const buttonStyle = (bgColor = "grey") => ({
   border: "1px solid grey",
   width: "100px",
   height: "35px",
-  padding: "1px",
   textAlign: "center",
   borderRadius: "5px",
   color: "white",

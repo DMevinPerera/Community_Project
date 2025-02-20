@@ -1,36 +1,76 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./AdminQuestionsPage.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "react-bootstrap";
 import Sidebar from "../../../components/Sidebar";
 import Question from "../../../components/Question";
 import Loader from "../../../components/Loader";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../../config/firebase";
 
 const AdminQuestionsPage = () => {
   const navigate = useNavigate();
-  const [questions, setQuestions] = useState([]); // Local state to store questions
-  const [loading, setLoading] = useState(false); // Loading state for simulating data fetch
-  const quizId = new URLSearchParams(window.location.search).get("quizId");
-  const quizTitle = new URLSearchParams(window.location.search).get("quizTitle");
+  const location = useLocation();
 
-  // Simulate adding a new question
+  const params = new URLSearchParams(location.search);
+  const quizId = params.get("quizId");
+  const categoryId = params.get("categoryId");
+  const quizTitle = params.get("quizTitle");
+
+  if (!quizId) {
+    return <div>Error: Missing quizId in URL!</div>;
+  }
+
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const questionsRef = categoryId
+          ? collection(db, "categories", categoryId, "quizzes", quizId, "questions")
+          : collection(db, "quizzes", quizId, "questions");
+
+        const questionsSnapshot = await getDocs(questionsRef);
+        if (!questionsSnapshot.empty) {
+          const fetchedQuestions = questionsSnapshot.docs.map((doc) => ({
+            quesId: doc.id,
+            ...doc.data(),
+          }));
+          setQuestions(fetchedQuestions);
+        } else {
+          setQuestions([]);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching questions:", error);
+        setError("Failed to fetch questions.");
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [quizId, categoryId]);
+
   const addNewQuestionHandler = () => {
-    navigate(`/adminAddQuestion/?quizId=${quizId}`);
+    navigate(
+      categoryId
+        ? `/adminAddQuestion/?quizId=${quizId}&categoryId=${categoryId}`
+        : `/adminAddQuestion/?quizId=${quizId}`
+    );
   };
 
-  // Simulate fetching questions when the component mounts
-  React.useEffect(() => {
-    setLoading(true);
-    // Simulate fetching questions
-    setTimeout(() => {
-      const mockQuestions = [
-        { content: "What is React?", option1: "Library", option2: "Framework", option3: "Language", option4: "Database", answer: "option1" },
-        { content: "What is useState?", option1: "A hook", option2: "A component", option3: "A function", option4: "An event", answer: "option1" },
-      ];
-      setQuestions(mockQuestions);
-      setLoading(false);
-    }, 1000); // Simulate loading time
-  }, []);
+  // Handle deletion of question
+  const handleDeleteQuestion = (quesId) => {
+    setQuestions((prevQuestions) =>
+      prevQuestions.filter((q) => q.quesId !== quesId)
+    );
+  };
+
+  if (error) {
+    return <div>{error}</div>;
+  }
 
   return (
     <div className="adminQuestionsPage__container">
@@ -38,7 +78,7 @@ const AdminQuestionsPage = () => {
         <Sidebar />
       </div>
       <div className="adminQuestionsPage__content">
-        <h2>{`Questions: ${quizTitle}`}</h2>
+        <h2>{quizTitle ? `Questions: ${quizTitle}` : "Questions"}</h2>
         <Button
           className="adminQuestionsPage__content--button"
           onClick={addNewQuestionHandler}
@@ -49,7 +89,15 @@ const AdminQuestionsPage = () => {
           <Loader />
         ) : (
           questions.map((q, index) => (
-            <Question key={index} number={index + 1} question={q} isAdmin={true} />
+            <Question
+              key={q.quesId}
+              number={index + 1}
+              question={q}
+              quizId={quizId}
+              categoryId={categoryId}
+              isAdmin={true}
+              onDelete={handleDeleteQuestion} // Pass the delete handler
+            />
           ))
         )}
       </div>

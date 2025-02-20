@@ -1,66 +1,117 @@
 import React, { useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import swal from "sweetalert";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { storage, db } from "../../../config/firebase"; // Ensure Firebase Storage and Firestore are correctly initialized
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import FormContainer from "../../../components/FormContainer";
 import Sidebar from "../../../components/Sidebar";
-import { useNavigate, useParams } from "react-router-dom";
 import "./AdminUpdateQuestionPage.css";
 
 const AdminUpdateQuestionPage = () => {
   const navigate = useNavigate();
-  const params = useParams();
+  const { categoryId, quizId, quesId } = useParams(); // Fetch all needed params
+  const location = useLocation(); // To handle query parameters
+
+  // Extract quizTitle from query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const quizTitle = queryParams.get("quizTitle");
+
+  const [content, setContent] = useState("");
+  const [image, setImage] = useState(null); // Store image file to upload
+  const [option1, setOption1] = useState("");
+  const [option2, setOption2] = useState("");
+  const [option3, setOption3] = useState("");
+  const [option4, setOption4] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [contentType, setContentType] = useState("text"); // Manage content type (text or image)
+
+  useEffect(() => {
+    if (!categoryId || !quizId || !quesId) {
+      swal("Error", "Invalid parameters!", "error");
+      return;
+    }
   
-  const quesId = params.quesId;
-  const urlParams = new URLSearchParams(window.location.search);
-  const quizId = urlParams.get("quizId");
-
-  // Simulate fetching the question based on quesId
-  const mockQuestions = [
-    { quesId: "1", content: "What is React?", option1: "Library", option2: "Framework", option3: "Language", option4: "Database", answer: "option1" },
-    { quesId: "2", content: "What is useState?", option1: "A hook", option2: "A component", option3: "A function", option4: "An event", answer: "option1" },
-  ];
-
-  const [oldQuestion, setOldQuestion] = useState(() =>
-    mockQuestions.find((question) => question.quesId === quesId)
-  );
-
-  const [content, setContent] = useState(oldQuestion ? oldQuestion.content : "");
-  const [image, setImage] = useState(oldQuestion ? oldQuestion.image : "");
-  const [option1, setOption1] = useState(oldQuestion ? oldQuestion.option1 : "");
-  const [option2, setOption2] = useState(oldQuestion ? oldQuestion.option2 : "");
-  const [option3, setOption3] = useState(oldQuestion ? oldQuestion.option3 : "");
-  const [option4, setOption4] = useState(oldQuestion ? oldQuestion.option4 : "");
-  const [answer, setAnswer] = useState(oldQuestion ? oldQuestion.answer : null);
-
-  const onSelectAnswerHandler = (e) => {
-    setAnswer(e.target.value);
+    const fetchData = async () => {
+      try {
+        const docRef = doc(db, "categories", categoryId, "quizzes", quizId, "questions", quesId);
+        const docSnap = await getDoc(docRef);
+  
+        if (docSnap.exists()) {
+          const questionData = docSnap.data();
+          setContent(questionData.content || "");
+          setImage(questionData.image || ""); // Set current image if it exists
+          setOption1(questionData.options?.option1 || "");
+          setOption2(questionData.options?.option2 || "");
+          setOption3(questionData.options?.option3 || "");
+          setOption4(questionData.options?.option4 || "");
+          setAnswer(questionData.answer || "");
+        } else {
+          swal("Error", "Question not found!", "error");
+        }
+      } catch (error) {
+        swal("Error", `Failed to fetch question: ${error.message}`, "error");
+      }
+    };
+  
+    fetchData();
+  }, [categoryId, quizId, quesId]);
+  
+  const handleImageChange = (e) => {
+    setImage(e.target.files[0]); // Capture the selected image file
   };
 
-  const submitHandler = (e) => {
-    e.preventDefault();
-    if (answer !== null && answer !== "n/a") {
-      // Simulating the update of the question
-      const updatedQuestion = {
-        quesId: quesId,
-        content: content,
-        image: image,
-        option1: option1,
-        option2: option2,
-        option3: option3,
-        option4: option4,
-        answer: answer,
-        quiz: {
-          quizId: quizId,
-        },
-      };
+  const uploadImage = async () => {
+    return new Promise((resolve, reject) => {
+      const storageRef = ref(storage, `questionImages/${Date.now()}-${image.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, image);
 
-      // Simulate success message after update
-      swal("Question Updated!", `${content} successfully updated`, "success");
-      console.log("Updated Question:", updatedQuestion);
-    } else {
-      swal("Invalid Selection!", "Please select a valid answer option", "error");
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          // Optionally handle upload progress
+        },
+        (error) => reject(error),
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL); // Return the URL once upload is complete
+        }
+      );
+    });
+  };
+
+  const submitHandler = async (e) => {
+    e.preventDefault();
+  
+    if (!categoryId || !quizId || !quesId) {
+      swal("Error", "Invalid question ID", "error");
+      return;
+    }
+  
+    try {
+      let imageURL = image ? await uploadImage() : ""; // Upload image if selected
+  
+      const docRef = doc(db, "categories", categoryId, "quizzes", quizId, "questions", quesId);
+      await updateDoc(docRef, {
+        content,
+        image: imageURL || image, // Store image URL or previous image
+        options: {
+          option1,
+          option2,
+          option3,
+          option4
+        },
+        answer,
+      });
+  
+      swal("Success!", "Question updated successfully!", "success");
+      navigate(`/adminQuestions/?quizId=${quizId}&categoryId=${categoryId}&quizTitle=${quizTitle}`);
+    } catch (error) {
+      swal("Error", `Failed to update question: ${error.message}`, "error");
     }
   };
+  
 
   return (
     <div className="adminUpdateQuestionPage__container">
@@ -71,27 +122,35 @@ const AdminUpdateQuestionPage = () => {
         <FormContainer>
           <h2>Update Question</h2>
           <Form onSubmit={submitHandler}>
-            <Form.Group className="my-3" controlId="content">
-              <Form.Label>Question</Form.Label>
-              <Form.Control
-                style={{ textAlign: "top" }}
-                as="textarea"
-                rows="3"
-                type="text"
-                placeholder="Enter Question Content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              />
-            </Form.Group>
+            {contentType === "text" ? (
+              <Form.Group className="my-3" controlId="content">
+                <Form.Label>Question</Form.Label>
+                <Form.Control
+                  style={{ textAlign: "top" }}
+                  as="textarea"
+                  rows="3"
+                  type="text"
+                  placeholder="Enter Question Content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                />
+              </Form.Group>
+            ) : (
+              <Form.Group className="my-3" controlId="image">
+                <Form.Label>Upload Question Image</Form.Label>
+                <Form.Control
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+              </Form.Group>
+            )}
 
             <Form.Group className="my-3" controlId="option1">
               <Form.Label>Option 1</Form.Label>
               <Form.Control
-                style={{ textAlign: "top" }}
                 as="textarea"
                 rows="2"
-                type="text"
-                placeholder="Enter Option 1"
                 value={option1}
                 onChange={(e) => setOption1(e.target.value)}
               />
@@ -100,11 +159,8 @@ const AdminUpdateQuestionPage = () => {
             <Form.Group className="my-3" controlId="option2">
               <Form.Label>Option 2</Form.Label>
               <Form.Control
-                style={{ textAlign: "top" }}
                 as="textarea"
                 rows="2"
-                type="text"
-                placeholder="Enter Option 2"
                 value={option2}
                 onChange={(e) => setOption2(e.target.value)}
               />
@@ -113,11 +169,8 @@ const AdminUpdateQuestionPage = () => {
             <Form.Group className="my-3" controlId="option3">
               <Form.Label>Option 3</Form.Label>
               <Form.Control
-                style={{ textAlign: "top" }}
                 as="textarea"
                 rows="2"
-                type="text"
-                placeholder="Enter Option 3"
                 value={option3}
                 onChange={(e) => setOption3(e.target.value)}
               />
@@ -126,11 +179,8 @@ const AdminUpdateQuestionPage = () => {
             <Form.Group className="my-3" controlId="option4">
               <Form.Label>Option 4</Form.Label>
               <Form.Control
-                style={{ textAlign: "top" }}
                 as="textarea"
                 rows="2"
-                type="text"
-                placeholder="Enter Option 4"
                 value={option4}
                 onChange={(e) => setOption4(e.target.value)}
               />
@@ -139,11 +189,11 @@ const AdminUpdateQuestionPage = () => {
             <div className="my-3">
               <label htmlFor="answer-select">Choose Correct Option:</label>
               <Form.Select
-                aria-label="Choose Correct Option"
                 id="answer-select"
-                onChange={onSelectAnswerHandler}
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
               >
-                <option value="n/a">Choose Option</option>
+                <option value="">Choose Option</option>
                 <option value="option1">Option 1</option>
                 <option value="option2">Option 2</option>
                 <option value="option3">Option 3</option>
@@ -151,11 +201,7 @@ const AdminUpdateQuestionPage = () => {
               </Form.Select>
             </div>
 
-            <Button
-              className="my-5 adminUpdateQuestionPage__content--button"
-              type="submit"
-              variant="primary"
-            >
+            <Button className="my-5" type="submit" variant="primary">
               Update
             </Button>
           </Form>
