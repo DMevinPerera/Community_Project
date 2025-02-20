@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { 
-  getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc 
+  getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where 
 } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Import the getStorage function
 
@@ -23,5 +23,27 @@ const storage = getStorage(app);
 // Reference to a Firestore collection
 const categoriesCollectionRef = collection(db, "categories");
 
+export const deleteQuestionFromFirestore = async (quesId) => {
+  try {
+    const questionRef = doc(db, "questions", quesId);
+    await deleteDoc(questionRef);
+    console.log("Question deleted successfully");
+  } catch (error) {
+    console.error("Error deleting question:", error);
+  }
+};
+
 // Export Firestore functions and references
-export { db, storage, addDoc, getDocs, doc, updateDoc, deleteDoc, categoriesCollectionRef };
+export { 
+  db, 
+  storage, 
+  addDoc, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  deleteDoc, 
+  collection, 
+  categoriesCollectionRef,
+  query,
+  where
+};

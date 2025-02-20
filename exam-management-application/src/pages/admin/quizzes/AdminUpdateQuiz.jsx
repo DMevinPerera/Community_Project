@@ -48,7 +48,7 @@ const AdminUpdateQuiz = () => {
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    if (selectedCategoryId !== null && selectedCategoryId !== "n/a") {
+    if (selectedCategoryId !== "n/a") {
       const updatedQuiz = {
         quizId: quizId,
         title: title,
@@ -56,22 +56,19 @@ const AdminUpdateQuiz = () => {
         isActive: isActive,
         category: categories.find((cat) => cat.catId == selectedCategoryId),
       };
-
+  
       try {
-        // Reference to the quiz document in Firestore
-        const quizRef = doc(db, "quizzes", quizId);
-
-        // Update the quiz document in Firestore
+        // Update the quiz inside the correct category
+        const quizRef = doc(db, "categories", selectedCategoryId, "quizzes", quizId);
         await updateDoc(quizRef, {
           title: updatedQuiz.title,
           description: updatedQuiz.description,
           isActive: updatedQuiz.isActive,
           category: updatedQuiz.category,
         });
-
+  
         swal("Quiz Updated!", `${updatedQuiz.title} successfully updated`, "success");
         console.log("Updated Quiz: ", updatedQuiz);
-        // You can navigate back to the quiz list or another page here
         navigate("/adminQuizzes");
       } catch (error) {
         swal("Error", "Failed to update quiz", "error");
@@ -81,35 +78,43 @@ const AdminUpdateQuiz = () => {
       swal("Error", "Please select a valid category!", "error");
     }
   };
-
+  
   useEffect(() => {
     // Fetch quiz details from Firestore when component mounts
     const fetchQuizDetails = async () => {
       try {
-        const quizDocRef = doc(db, "quizzes", quizId);
-        const quizDoc = await getDoc(quizDocRef);
-  
-        if (quizDoc.exists()) {
-          const quizData = quizDoc.data();
-  
-          // Check if category exists, otherwise assign a default value
-          const categoryData = quizData.category ? quizData.category : { catId: "", title: "Uncategorized" };
-  
-          setOldQuiz({
-            quizId: quizDoc.id,
-            title: quizData.title || "",
-            description: quizData.description || "",
-            maxMarks: quizData.maxMarks || 50,
-            numberOfQuestions: quizData.numberOfQuestions || 5,
-            isActive: quizData.isActive ?? true,
-            category: categoryData, // Ensure category is always defined
-          });
-  
-          setTitle(quizData.title || "");
-          setDescription(quizData.description || "");
-          setIsActive(quizData.isActive ?? true);
-          setSelectedCategoryId(categoryData.catId || "n/a"); // Default if missing
-        } else {
+        // First, fetch all categories
+        const categoriesSnapshot = await getDocs(collection(db, "categories"));
+        let quizFound = false;
+    
+        for (const categoryDoc of categoriesSnapshot.docs) {
+          const categoryId = categoryDoc.id;
+          const quizRef = doc(db, "categories", categoryId, "quizzes", quizId);
+          const quizDoc = await getDoc(quizRef);
+    
+          if (quizDoc.exists()) {
+            const quizData = quizDoc.data();
+            quizFound = true;
+    
+            setOldQuiz({
+              quizId: quizDoc.id,
+              title: quizData.title || "",
+              description: quizData.description || "",
+              maxMarks: quizData.maxMarks || 50,
+              numberOfQuestions: quizData.numberOfQuestions || 5,
+              isActive: quizData.isActive ?? true,
+              category: { catId: categoryId, title: categoryDoc.data().title }, // Store category
+            });
+    
+            setTitle(quizData.title || "");
+            setDescription(quizData.description || "");
+            setIsActive(quizData.isActive ?? true);
+            setSelectedCategoryId(categoryId);
+            break;
+          }
+        }
+    
+        if (!quizFound) {
           swal("Error", "Quiz not found!", "error");
         }
       } catch (error) {
@@ -117,6 +122,7 @@ const AdminUpdateQuiz = () => {
         console.error("Error fetching quiz details: ", error);
       }
     };
+    
   
     fetchQuizDetails();
   }, [quizId]);

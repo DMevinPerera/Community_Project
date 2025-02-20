@@ -3,72 +3,118 @@ import { Button, Form } from "react-bootstrap";
 import swal from "sweetalert";
 import FormContainer from "../../../components/FormContainer";
 import Sidebar from "../../../components/Sidebar";
+import { useNavigate, useLocation } from "react-router-dom";
+import { db } from "../../../config/firebase";
+import { collection, addDoc, getDocs } from "firebase/firestore";
+
 import "./AdminAddQuestionsPage.css";
-import { useNavigate } from "react-router-dom";
 
 const AdminAddQuestionsPage = () => {
   const [content, setContent] = useState("");
-  const [image, setImage] = useState(null); // Store the selected image
+  const [image, setImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
   const [option1, setOption1] = useState("");
   const [option2, setOption2] = useState("");
   const [option3, setOption3] = useState("");
   const [option4, setOption4] = useState("");
-  const [answer, setAnswer] = useState(null);
-  const [questions, setQuestions] = useState([]); // Local state to simulate storing questions
-  const [imagePreview, setImagePreview] = useState(null); // To show the image preview
+  const [answer, setAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const params = new URLSearchParams(location.search);
+  const quizId = params.get("quizId");
+  const categoryId = params.get("categoryId");
+
+  if (!quizId || !categoryId) {
+    swal("Error", "Quiz ID or Category ID is missing! Cannot add question.", "error");
+    return null;
+  }
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", "smart-tuition");
+    data.append("cloud_name", "dlbvyir2f");
+
+    try {
+      setLoading(true);
+      const res = await fetch("https://api.cloudinary.com/v1_1/dlbvyir2f/image/upload", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Image upload failed");
+      }
+
+      const uploadedImage = await res.json();
+      setImageUrl(uploadedImage.url);
+      setLoading(false);
+      swal("Success", "Image uploaded successfully!", "success");
+
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      swal("Error", "Image upload failed!", "error");
+      setLoading(false);
+    }
+  };
 
   const onSelectAnswerHandler = (e) => {
     setAnswer(e.target.value);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const submitHandler = (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault();
 
-    // Ensure a valid answer is selected
-    if (answer !== null && answer !== "n/a") {
+    if (!content && !imageUrl) {
+      swal("Invalid Input", "Either text or an image is required for the question!", "error");
+      return;
+    }
+
+    if (!option1 || !option2 || !option3 || !option4 || !answer || answer === "n/a") {
+      swal("Invalid Input", "All fields are required!", "error");
+      return;
+    }
+
+    try {
+      // Get current questions count to set the next number
+      const questionsRef = collection(db, "categories", categoryId, "quizzes", quizId, "questions");
+      const snapshot = await getDocs(questionsRef);
+      const currentQuestionsCount = snapshot.docs.length; // Count of existing questions
+
       const newQuestion = {
-        content: content,
-        image: image,
-        option1: option1,
-        option2: option2,
-        option3: option3,
-        option4: option4,
-        answer: answer,
+        content: content || null,
+        image: imageUrl || null,
+        options: { option1, option2, option3, option4 },
+        answer,
       };
 
-      // Simulate adding the question to local state
-      setQuestions((prevQuestions) => [...prevQuestions, newQuestion]);
+      // Add new question
+      await addDoc(questionsRef, newQuestion);
 
-      swal("Question Added!", `${content} successfully added`, "success");
+      swal("Success", "Question added successfully!", "success");
 
-      // Clear the form after submission
+      // Clear form fields
       setContent("");
       setImage(null);
-      setImagePreview(null);
+      setImageUrl(null);
       setOption1("");
       setOption2("");
       setOption3("");
       setOption4("");
-      setAnswer(null);
+      setAnswer("");
 
-      // Redirect to the questions list or any other relevant page
-      navigate("/adminQuestions");
-    } else {
-      swal("Invalid Answer", "Please select a valid correct answer.", "error");
+      // Navigate back to questions page
+      navigate(`/adminQuestions/?quizId=${quizId}&categoryId=${categoryId}`);
+    } catch (error) {
+      console.error("Error adding question to Firestore:", error);
+      swal("Error", "Failed to add the question.", "error");
     }
   };
 
@@ -82,115 +128,70 @@ const AdminAddQuestionsPage = () => {
           <h2>Add Question</h2>
           <Form onSubmit={submitHandler}>
             <Form.Group className="my-3" controlId="content">
-              <Form.Label>Question</Form.Label>
+              <Form.Label>Question (Text)</Form.Label>
               <Form.Control
-                style={{ textAlign: "top", height: "150px" }}  // Fixed height for textarea
                 as="textarea"
                 rows="3"
-                type="text"
                 placeholder="Enter Question Content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />
             </Form.Group>
 
-            {/* Image Upload */}
             <Form.Group className="my-3" controlId="image">
               <Form.Label>Upload Image (Optional)</Form.Label>
-              <Form.Control
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-              {imagePreview && (
+              <Form.Control type="file" accept="image/*" onChange={handleImageUpload} />
+              {loading && <p>Uploading image...</p>}
+              {imageUrl && (
                 <div className="my-3">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    style={{
-                      width: "100%",  // Fixed width for image preview
-                      height: "100%",  // Fixed height for image preview
-                      objectFit: "cover",
-                      borderRadius: "8px",
-                    }}
-                  />
+                  <img src={imageUrl} alt="Uploaded" style={{ width: "100%", height: "auto", borderRadius: "8px" }} />
                 </div>
               )}
             </Form.Group>
 
-            <Form.Group className="my-3" controlId="option1">
-              <Form.Label>Option 1</Form.Label>
-              <Form.Control
-                style={{ textAlign: "top", height: "80px" }}  // Fixed height for option textarea
-                as="textarea"
-                rows="2"
-                type="text"
-                placeholder="Enter Option 1"
-                value={option1}
-                onChange={(e) => setOption1(e.target.value)}
-              />
-            </Form.Group>
+            {[option1, option2, option3, option4].map((opt, index) => (
+              <Form.Group key={index} className="my-3">
+                <Form.Label>{`Option ${index + 1}`}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows="2"
+                  placeholder={`Enter Option ${index + 1}`}
+                  value={opt}
+                  onChange={(e) => {
+                    switch (index) {
+                      case 0:
+                        setOption1(e.target.value);
+                        break;
+                      case 1:
+                        setOption2(e.target.value);
+                        break;
+                      case 2:
+                        setOption3(e.target.value);
+                        break;
+                      case 3:
+                        setOption4(e.target.value);
+                        break;
+                      default:
+                        break;
+                    }
+                  }}
+                />
+              </Form.Group>
+            ))}
 
-            <Form.Group className="my-3" controlId="option2">
-              <Form.Label>Option 2</Form.Label>
-              <Form.Control
-                style={{ textAlign: "top", height: "80px" }}  // Fixed height for option textarea
-                as="textarea"
-                rows="2"
-                type="text"
-                placeholder="Enter Option 2"
-                value={option2}
-                onChange={(e) => setOption2(e.target.value)}
-              />
-            </Form.Group>
-
-            <Form.Group className="my-3" controlId="option3">
-              <Form.Label>Option 3</Form.Label>
-              <Form.Control
-                style={{ textAlign: "top", height: "80px" }}  // Fixed height for option textarea
-                as="textarea"
-                rows="2"
-                type="text"
-                placeholder="Enter Option 3"
-                value={option3}
-                onChange={(e) => setOption3(e.target.value)}
-              />
-            </Form.Group>
-
-            <Form.Group className="my-3" controlId="option4">
-              <Form.Label>Option 4</Form.Label>
-              <Form.Control
-                style={{ textAlign: "top", height: "80px" }}  // Fixed height for option textarea
-                as="textarea"
-                rows="2"
-                type="text"
-                placeholder="Enter Option 4"
-                value={option4}
-                onChange={(e) => setOption4(e.target.value)}
-              />
-            </Form.Group>
-
-            <div className="my-3">
-              <label htmlFor="answer-select">Choose Correct Option:</label>
-              <Form.Select
-                aria-label="Choose Correct Option"
-                id="answer-select"
-                onChange={onSelectAnswerHandler}
-              >
+            <Form.Group className="my-3">
+              <Form.Label>Choose Correct Option:</Form.Label>
+              <Form.Select aria-label="Choose Correct Option" onChange={onSelectAnswerHandler} value={answer}>
                 <option value="n/a">Choose Option</option>
                 <option value="option1">Option 1</option>
                 <option value="option2">Option 2</option>
                 <option value="option3">Option 3</option>
                 <option value="option4">Option 4</option>
               </Form.Select>
-            </div>
+            </Form.Group>
 
-            <Button
-              className="my-5 adminAddQuestionPage__content--button"
-              type="submit"
-              variant="primary"
-            >
-              Add
+            <Button className="my-5 adminAddQuestionPage__content--button" type="submit" variant="primary">
+              Add Question
             </Button>
           </Form>
         </FormContainer>

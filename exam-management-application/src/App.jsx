@@ -49,7 +49,7 @@ const App = () => {
         <Route path="/adminStudentAttendenceTracker" element={<AdminStudentAttendenceTracker />} />
         <Route path="/adminAttendenceMarking" element={<AdminAttendenceMarking />} />
         <Route
-          path="/adminUpdateQuestion/:quesId"
+          path="/adminUpdateQuestion/:categoryId/:quizId/:quesId"
           element={<AdminUpdateQuestionPage />}
         />
         <Route path="/profile" element={<UserProfilePage />} />
