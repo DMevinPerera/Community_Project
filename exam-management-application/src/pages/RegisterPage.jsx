@@ -4,11 +4,15 @@ import { Form, Button, InputGroup, Row, Col } from "react-bootstrap";
 import FormContainer from "../components/FormContainer";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../config/firebase"; // Import auth
+import { createUserWithEmailAndPassword } from "firebase/auth"; // Import Firebase Auth function
+import swal from "sweetalert";
 
 const RegisterPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // Add email field
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -21,6 +25,7 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [grade, setGrade] = useState("");
+  const [imageUrl, setImageUrl] = useState(""); // State to store Cloudinary image URL
 
   const navigate = useNavigate();
 
@@ -34,34 +39,95 @@ const RegisterPage = () => {
     setConfirmPasswordType(showConfirmPassword ? "password" : "text");
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
 
-    if (file) {
-      const fileReader = new FileReader();
-      fileReader.onload = () => {
-        setPreview(fileReader.result); // Set preview image
-      };
-      fileReader.readAsDataURL(file);
-      setProfilePic(file);
+    if (!file) return;
+
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", "smart-tuition"); // Replace with your Cloudinary upload preset
+    data.append("cloud_name", "dlbvyir2f"); // Replace with your Cloudinary cloud name
+
+    try {
+      setLoading(true);
+      const res = await fetch("https://api.cloudinary.com/v1_1/dlbvyir2f/image/upload", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Image upload failed");
+      }
+
+      const uploadedImage = await res.json();
+      setImageUrl(uploadedImage.secure_url); // Store the Cloudinary image URL
+      setPreview(uploadedImage.secure_url); // Set preview image
+      setLoading(false);
+      swal("Success", "Image uploaded successfully!", "success");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      swal("Error", "Image upload failed!", "error");
+      setLoading(false);
     }
   };
 
-  const submitHandler = (e) => {
+  const submitHandler = async (e) => {
     e.preventDefault();
-
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+  
+    // 🔴 Check Password Length
+    if (password.length < 6) {
+      swal("Error", "Password must be at least 6 characters!", "error");
       return;
     }
-
+  
+    if (password !== confirmPassword) {
+      swal("Error", "Passwords do not match!", "error");
+      return;
+    }
+  
+    if (!imageUrl) {
+      swal("Error", "Please upload a profile picture!", "error");
+      return;
+    }
+  
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      alert("Registration Successful!");
+  
+    try {
+      // ✅ Firebase Authentication: Create User
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+  
+      // ✅ Firestore: Store User Data with UID as Document ID
+      await setDoc(doc(db, "users", user.uid), { // Use setDoc instead of addDoc
+        firstName,
+        lastName,
+        email,
+        phoneNumber,
+        admissionNumber,
+        grade,
+        profilePic: imageUrl, // Store Cloudinary Image URL
+        status: "pending", // Default status
+        createdAt: new Date(),
+      });
+  
+      swal("Success", "Registration Successful! Awaiting admin approval.", "success");
       navigate("/login");
-    }, 2000);
+    } catch (error) {
+      console.error("Error registering user:", error);
+  
+      if (error.code === "auth/email-already-in-use") {
+        swal("Error", "Email is already in use!", "error");
+      } else if (error.code === "auth/weak-password") {
+        swal("Error", "Password must be at least 6 characters!", "error");
+      } else {
+        swal("Error", "Registration failed. Please try again.", "error");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   return (
     <FormContainer>
@@ -87,13 +153,13 @@ const RegisterPage = () => {
           />
         </Form.Group>
 
-        <Form.Group className="my-3" controlId="username">
-          <Form.Label>Username</Form.Label>
+        <Form.Group className="my-3" controlId="email">
+          <Form.Label>Email</Form.Label>
           <Form.Control
-            type="text"
-            placeholder="Enter Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            placeholder="Enter Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </Form.Group>
 
@@ -197,7 +263,7 @@ const RegisterPage = () => {
         <Row className="py-3">
           <Col>
             Have an Account?{" "}
-            <Link to="/" style={{ color: "#44b131" }}>
+            <Link to="/login" style={{ color: "#44b131" }}>
               Login
             </Link>
           </Col>
