@@ -3,6 +3,7 @@ import {
   getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where 
 } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; // Import the getStorage function
+import { getAuth } from "firebase/auth"; // Import the getAuth function
 
 const firebaseConfig = {
   apiKey: "AIzaSyCh_tvbcHNDt9P0mayim0FwFU9UF8nCARM",
@@ -16,9 +17,10 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore and Storage
+// Initialize Firestore, Storage, and Auth
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app); // Initialize Firebase Auth
 
 // Reference to a Firestore collection
 const categoriesCollectionRef = collection(db, "categories");
@@ -37,6 +39,7 @@ export const deleteQuestionFromFirestore = async (quesId) => {
 export { 
   db, 
   storage, 
+  auth, // Export auth
   addDoc, 
   getDocs, 
   doc, 

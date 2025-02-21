@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect } from "react";
 import { Table, Form, Button, Modal } from "react-bootstrap";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
 import Sidebar from "../../../components/Sidebar";
-import "./AdminStudentList.css"; // Add styles to ensure responsiveness
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { db } from "../../../config/firebase";
+import "./AdminStudentList.css"; 
 
 const AdminStudentList = () => {
   const [students, setStudents] = useState([]);
@@ -11,28 +14,50 @@ const AdminStudentList = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
-    setStudents([
-      { id: 1, firstName: "John", lastName: "Doe", grade: "10", phone: "1234567890", admissionNumber: "A001", status: "Pending" },
-      { id: 2, firstName: "Jane", lastName: "Smith", grade: "11", phone: "0987654321", admissionNumber: "A002", status: "Approved" },
-    ]);
+    const fetchStudents = async () => {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const studentsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setStudents(studentsData);
+    };
+    fetchStudents();
   }, []);
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this student?")) {
-      setStudents(students.filter((student) => student.id !== id));
-    }
-  };
-
-  const handleUpdate = (student) => {
-    setSelectedStudent(student);
-    setShowModal(true);
-  };
-
-  const handleSaveChanges = () => {
-    setStudents(
-      students.map((s) => (s.id === selectedStudent.id ? selectedStudent : s))
+  const handleApprove = async (id) => {
+    const studentRef = doc(db, "users", id);
+    await updateDoc(studentRef, { status: "approved" });
+    setStudents((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: "approved" } : s))
     );
-    setShowModal(false);
+  };
+
+  const handleReject = async (id) => {
+    const studentRef = doc(db, "users", id);
+    await updateDoc(studentRef, { status: "rejected" });
+    setStudents((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: "rejected" } : s))
+    );
+  };
+
+  const handleSaveChanges = async () => {
+    if (selectedStudent) {
+      const studentRef = doc(db, "users", selectedStudent.id);
+      await updateDoc(studentRef, {
+        firstName: selectedStudent.firstName,
+        lastName: selectedStudent.lastName,
+        grade: selectedStudent.grade,
+        phoneNumber: selectedStudent.phoneNumber,
+        admissionNumber: selectedStudent.admissionNumber,
+      });
+
+      setStudents((prev) =>
+        prev.map((s) => (s.id === selectedStudent.id ? selectedStudent : s))
+      );
+
+      setShowModal(false);
+    }
   };
 
   return (
@@ -52,7 +77,9 @@ const AdminStudentList = () => {
           >
             <option value="">All Grades</option>
             {[...Array(13).keys()].map((i) => (
-              <option key={i + 1} value={i + 1}>Grade {i + 1}</option>
+              <option key={i + 1} value={i + 1}>
+                Grade {i + 1}
+              </option>
             ))}
           </Form.Control>
         </Form.Group>
@@ -72,22 +99,43 @@ const AdminStudentList = () => {
           </thead>
           <tbody>
             {students
-              .filter((student) => (gradeFilter ? student.grade === gradeFilter : true))
+              .filter((student) =>
+                gradeFilter ? student.grade === Number(gradeFilter) : true
+              )
               .map((student, index) => (
                 <tr key={student.id}>
                   <td>{index + 1}</td>
                   <td>{student.firstName}</td>
                   <td>{student.lastName}</td>
                   <td>{student.grade}</td>
-                  <td>{student.phone}</td>
+                  <td>{student.phoneNumber}</td>
                   <td>{student.admissionNumber}</td>
                   <td>{student.status}</td>
                   <td>
-                    <Button variant="info" className="mx-2" onClick={() => handleUpdate(student)}>
-                      <FaEdit />
+                    <Button
+                      variant="success"
+                      className="mx-2"
+                      onClick={() => handleApprove(student.id)}
+                      disabled={student.status === "approved"}
+                    >
+                      Approve
                     </Button>
-                    <Button variant="danger" onClick={() => handleDelete(student.id)}>
-                      <FaTrash />
+                    <Button
+                      variant="danger"
+                      onClick={() => handleReject(student.id)}
+                      disabled={student.status === "rejected"}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      variant="info"
+                      className="mx-2"
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setShowModal(true);
+                      }}
+                    >
+                      <FaEdit />
                     </Button>
                   </td>
                 </tr>
@@ -96,6 +144,7 @@ const AdminStudentList = () => {
         </Table>
       </div>
 
+      {/* Edit Student Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Edit Student</Modal.Title>
@@ -108,7 +157,12 @@ const AdminStudentList = () => {
                 <Form.Control
                   type="text"
                   value={selectedStudent.firstName}
-                  onChange={(e) => setSelectedStudent({ ...selectedStudent, firstName: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedStudent({
+                      ...selectedStudent,
+                      firstName: e.target.value,
+                    })
+                  }
                 />
               </Form.Group>
               <Form.Group className="my-2">
@@ -116,7 +170,12 @@ const AdminStudentList = () => {
                 <Form.Control
                   type="text"
                   value={selectedStudent.lastName}
-                  onChange={(e) => setSelectedStudent({ ...selectedStudent, lastName: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedStudent({
+                      ...selectedStudent,
+                      lastName: e.target.value,
+                    })
+                  }
                 />
               </Form.Group>
               <Form.Group className="my-2">
@@ -124,10 +183,17 @@ const AdminStudentList = () => {
                 <Form.Control
                   as="select"
                   value={selectedStudent.grade}
-                  onChange={(e) => setSelectedStudent({ ...selectedStudent, grade: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedStudent({
+                      ...selectedStudent,
+                      grade: Number(e.target.value),
+                    })
+                  }
                 >
                   {[...Array(13).keys()].map((i) => (
-                    <option key={i + 1} value={i + 1}>Grade {i + 1}</option>
+                    <option key={i + 1} value={i + 1}>
+                      Grade {i + 1}
+                    </option>
                   ))}
                 </Form.Control>
               </Form.Group>
@@ -135,8 +201,13 @@ const AdminStudentList = () => {
                 <Form.Label>Phone</Form.Label>
                 <Form.Control
                   type="text"
-                  value={selectedStudent.phone}
-                  onChange={(e) => setSelectedStudent({ ...selectedStudent, phone: e.target.value })}
+                  value={selectedStudent.phoneNumber}
+                  onChange={(e) =>
+                    setSelectedStudent({
+                      ...selectedStudent,
+                      phoneNumber: e.target.value,
+                    })
+                  }
                 />
               </Form.Group>
               <Form.Group className="my-2">
@@ -144,7 +215,12 @@ const AdminStudentList = () => {
                 <Form.Control
                   type="text"
                   value={selectedStudent.admissionNumber}
-                  onChange={(e) => setSelectedStudent({ ...selectedStudent, admissionNumber: e.target.value })}
+                  onChange={(e) =>
+                    setSelectedStudent({
+                      ...selectedStudent,
+                      admissionNumber: e.target.value,
+                    })
+                  }
                 />
               </Form.Group>
             </Form>

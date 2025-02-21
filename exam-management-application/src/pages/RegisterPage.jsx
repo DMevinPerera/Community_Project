@@ -4,11 +4,15 @@ import { Form, Button, InputGroup, Row, Col } from "react-bootstrap";
 import FormContainer from "../components/FormContainer";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "../config/firebase"; // Import auth
+import { createUserWithEmailAndPassword } from "firebase/auth"; // Import Firebase Auth function
+import swal from "sweetalert";
 
 const RegisterPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // Add email field
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -20,11 +24,13 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [grade, setGrade] = useState("");
+
   const [capturedImages, setCapturedImages] = useState([]); // Array to store captured images
   const [isCapturing, setIsCapturing] = useState(false); // Flag to indicate if capturing is in progress
 
   const cameraRef = useRef(null);
   const videoRef = useRef(null);
+
 
   const navigate = useNavigate();
 
@@ -60,8 +66,9 @@ const RegisterPage = () => {
     setConfirmPasswordType(showConfirmPassword ? "password" : "text");
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
+
 
     if (file) {
       setProfilePic(file);
@@ -134,12 +141,20 @@ const RegisterPage = () => {
   };
 
   const submitHandler = (e) => {
-    e.preventDefault();
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+    e.preventDefault();
+  
+
+    if (password.length < 6) {
+      swal("Error", "Password must be at least 6 characters!", "error");
       return;
     }
+  
+    if (password !== confirmPassword) {
+      swal("Error", "Passwords do not match!", "error");
+      return;
+    }
+
 
     if (capturedImages.length < 100) {
       alert("Please capture 100 images!");
@@ -148,7 +163,9 @@ const RegisterPage = () => {
 
     sendCapturedImagesToPythonBackend(capturedImages);
 
+
   };
+  
 
   // const stopCamera = () => {
   //   if (streamRef.current) {
@@ -193,13 +210,15 @@ const RegisterPage = () => {
           />
         </Form.Group>
 
-        <Form.Group className="my-3" controlId="username">
-          <Form.Label>Username</Form.Label>
+        <Form.Group className="my-3" controlId="email">
+          <Form.Label>Email</Form.Label>
           <Form.Control
+
             type="text"
             placeholder="Enter username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+
           />
         </Form.Group>
 
@@ -324,7 +343,7 @@ const RegisterPage = () => {
         <Row className="py-3">
           <Col>
             Have an Account?{" "}
-            <Link to="/" style={{ color: "#44b131" }}>
+            <Link to="/login" style={{ color: "#44b131" }}>
               Login
             </Link>
           </Col>
