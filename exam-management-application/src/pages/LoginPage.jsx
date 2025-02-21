@@ -21,8 +21,22 @@ const LoginPage = () => {
     setPasswordType(showPassword ? "password" : "text");
   };
 
+  // Static admin credentials
+  // const staticAdminEmail = "admin@gmail.com";
+  // const staticAdminPassword = "123456";
+
   const submitHandler = async (e) => {
     e.preventDefault();
+  
+    // Static admin credentials
+    const staticAdminEmail = "admin@gmail.com";
+    const staticAdminPassword = "123456";
+  
+    // Check if the entered credentials match the static admin credentials
+    if (email === staticAdminEmail && password === staticAdminPassword) {
+      navigate("/adminprofile"); // Redirect to admin profile
+      return; // Exit the function early
+    }
   
     try {
       // Sign in with Firebase Authentication
@@ -39,11 +53,7 @@ const LoginPage = () => {
         // Check if the user is approved
         if (userData.status === "approved") {
           // Redirect based on user role or status
-          if (user.email === "admin@example.com") {
-            navigate("/adminprofile"); // Redirect to admin profile
-          } else {
-            navigate("/profile"); // Redirect to user profile
-          }
+          navigate("/profile"); // Redirect to user profile
         } else {
           setError("Your account is not approved yet. Please contact the admin.");
           await auth.signOut(); // Log out the user if not approved
