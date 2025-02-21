@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Button, InputGroup, Row, Col } from "react-bootstrap";
 import FormContainer from "../components/FormContainer";
@@ -26,8 +26,35 @@ const RegisterPage = () => {
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [grade, setGrade] = useState("");
   const [imageUrl, setImageUrl] = useState(""); // State to store Cloudinary image URL
+  const [capturedImages, setCapturedImages] = useState([]); // Array to store captured images
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const cameraRef = useRef(null);
+  const videoRef = useRef(null);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          videoRef.current.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error("Error accessing webcam: ", error);
+        });
+    }
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        let stream = videoRef.current.srcObject;
+        let tracks = stream.getTracks();
+
+        tracks.forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const showPasswordHandler = () => {
     setShowPassword(!showPassword);
@@ -72,6 +99,72 @@ const RegisterPage = () => {
     }
   };
 
+  const captureImage = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, "image/jpeg");
+      });
+    }
+    return null;
+  };
+  
+  const startCapturingImages = async () => {
+    setIsCapturing(true);
+    const totalImages = 100;
+    const images = [];
+  
+    for (let i = 0; i < totalImages; i++) {
+      const blob = await captureImage();
+      if (blob) {
+        images.push(blob);
+      }
+    }
+  
+    setCapturedImages(images);
+
+    setIsCapturing(false);
+  };
+  
+  const sendCapturedImagesToPythonBackend = (images) => {
+    setLoading(true);
+  
+    const formData = new FormData();
+    const fullName = `${firstName} ${lastName}`;
+    formData.append("name", fullName);
+  
+    images.forEach((blob, index) => {
+      const file = new File([blob], `capturedFaceImage_${index}.jpg`, { type: "image/jpeg" });
+      formData.append("images", file);
+    });
+  
+    fetch("http://localhost:5000/register_face", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setLoading(false);
+        if (data.message) {
+          alert("Registration Successful!");
+          navigate("/login");
+        } else {
+          alert("Registration Failed: " + data.error);
+        }
+      })
+      .catch((error) => {
+        setLoading(false);
+        alert("Error: " + error.message);
+      });
+  };
+
+
   const submitHandler = async (e) => {
     e.preventDefault();
   
@@ -110,7 +203,7 @@ const RegisterPage = () => {
         status: "pending", // Default status
         createdAt: new Date(),
       });
-  
+      sendCapturedImagesToPythonBackend(capturedImages);
       swal("Success", "Registration Successful! Awaiting admin approval.", "success");
       navigate("/login");
     } catch (error) {
@@ -227,6 +320,35 @@ const RegisterPage = () => {
             value={admissionNumber}
             onChange={(e) => setAdmissionNumber(e.target.value)}
           />
+        </Form.Group>
+
+         {/* Webcam Capture */}
+         <Form.Group className="my-3" controlId="webcamCapture">
+          <Form.Label>Capture Face Images (100 images)</Form.Label>
+          <div className="camera-container">
+            <video
+              ref={videoRef}
+              width="100%"
+              height="auto"
+              autoPlay
+              muted
+              style={{
+                borderRadius: "8px",
+                objectFit: "cover",
+                border: "2px solid #444",
+              }}
+            ></video>
+            <Button
+              onClick={startCapturingImages}
+              className="my-3"
+              disabled={isCapturing}
+            >
+              {isCapturing ? "Capturing..." : "Capture Images"}
+            </Button>
+          </div>
+          <div className="mt-3">
+            <h5>Captured Images: {capturedImages.length} / 100</h5>
+          </div>
         </Form.Group>
 
         {/* Profile Picture Upload */}
