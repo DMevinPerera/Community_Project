@@ -52,12 +52,14 @@ const App = () => {
           path="/adminUpdateQuestion/:categoryId/:quizId/:quesId"
           element={<AdminUpdateQuestionPage />}
         />
+        
+        
         <Route path="/profile" element={<UserProfilePage />} />
         <Route path="/quizzes" element={<UserQuizzesPage />} />
-        <Route path="/quiz/*" element={<UserQuizzesPage />} />
-        <Route path="/quizManual/" element={<UserQuizManualPage />} />
-        <Route path="/questions/" element={<UserQuestionsPage />} />
-        <Route path="/quizResults/" element={<UserQuizResultPage />} />
+        <Route path="/quizManual" element={<UserQuizManualPage />} />
+        <Route path="/questions" element={<UserQuestionsPage />} />
+        <Route path="/quizResults" element={<UserQuizResultPage />} />
+      
       </Routes>
     </Router>
   );
