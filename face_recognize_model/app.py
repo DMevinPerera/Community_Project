@@ -90,10 +90,6 @@ def register_face():
         name = request.form.get('name')
         images = request.files.getlist('images')
 
-        print(f"Received name: {name}")
-        print(f"Received images Length: {len(images)} images")
-        print(f"Received images: {images} images")
-
         if not name or not images:
             return jsonify({'error': 'Name and images are required'}), 400
 
