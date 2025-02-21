@@ -3,38 +3,39 @@ import SidebarUser from "../../components/SidebarUser";
 import "./UserQuizResultPage.css";
 import { useNavigate } from "react-router-dom";
 import { Table } from "react-bootstrap";
-import Message from "../../components/Message";
-import { Link } from "react-router-dom";
+import { collection, getDocs } from "firebase/firestore";
+import { db, auth } from "../../config/firebase";
 
 const UserQuizResultPage = () => {
   const navigate = useNavigate();
-
-  // Static quiz result data
-  const [quizResults, setQuizResults] = useState([
-    {
-      quiz: {
-        quizId: "1",
-        title: "Sample Quiz",
-        category: { title: "General Knowledge" },
-        maxMarks: 25,
-      },
-      totalObtainedMarks: 20,
-      attemptDatetime: "2024-12-05 10:30 AM",
-    },
-    {
-      quiz: {
-        quizId: "2",
-        title: "Math Quiz",
-        category: { title: "Mathematics" },
-        maxMarks: 30,
-      },
-      totalObtainedMarks: 25,
-      attemptDatetime: "2024-12-04 02:15 PM",
-    },
-  ]);
+  const [quizResults, setQuizResults] = useState([]);
 
   useEffect(() => {
-    if (!localStorage.getItem("jwtToken")) navigate("/");
+    const fetchQuizResults = async () => {
+      try {
+        const userMarksRef = collection(db, `users/${auth.currentUser.uid}/marks`);
+        const quizResultsSnapshot = await getDocs(userMarksRef);
+        const quizResultsData = quizResultsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Sort results by timestamp in descending order
+        quizResultsData.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
+        // Add a serial number to each result
+        const resultsWithSerial = quizResultsData.map((result, index) => ({
+          ...result,
+          serialNumber: index + 1,
+        }));
+
+        setQuizResults(resultsWithSerial);
+      } catch (error) {
+        console.error("Error fetching quiz results:", error);
+      }
+    };
+
+    fetchQuizResults();
   }, []);
 
   return (
@@ -44,11 +45,11 @@ const UserQuizResultPage = () => {
       </div>
 
       <div className="userQuizResultPage__content">
-        {quizResults && quizResults.length !== 0 ? (
+        {quizResults.length > 0 ? (
           <Table bordered className="userQuizResultPage__content--table">
             <thead>
               <tr>
-                <th>Quiz Id</th>
+                <th>#</th>
                 <th>Quiz Name</th>
                 <th>Category Name</th>
                 <th>Obtained Marks</th>
@@ -56,25 +57,21 @@ const UserQuizResultPage = () => {
                 <th>Date</th>
               </tr>
             </thead>
-            {quizResults.map((r, index) => {
-              return (
-                <tbody key={index}>
-                  <tr>
-                    <td>{r.quiz.quizId}</td>
-                    <td>{r.quiz.title}</td>
-                    <td>{r.quiz.category.title}</td>
-                    <td>{r.totalObtainedMarks}</td>
-                    <td>{r.quiz.maxMarks}</td>
-                    <td>{r.attemptDatetime}</td>
-                  </tr>
-                </tbody>
-              );
-            })}
+            <tbody>
+              {quizResults.map((result) => (
+                <tr key={result.id}>
+                  <td>{result.serialNumber}</td>
+                  <td>{result.quizTitle}</td>
+                  <td>{result.categoryTitle}</td>
+                  <td>{result.obtainedMarks}</td>
+                  <td>{result.totalMarks}</td>
+                  <td>{result.timestamp?.toDate().toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
           </Table>
         ) : (
-          <Message>
-            No results to display. Attempt any <Link to="/quizzes">Quiz.</Link>
-          </Message>
+          <p>No results to display. Attempt any quiz.</p>
         )}
       </div>
     </div>

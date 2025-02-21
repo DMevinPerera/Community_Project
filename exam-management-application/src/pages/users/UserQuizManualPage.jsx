@@ -3,34 +3,41 @@ import "./UserQuizManualPage.css";
 import SidebarUser from "../../components/SidebarUser";
 import { useNavigate } from "react-router-dom";
 import { Button } from "react-bootstrap";
-import Loader from "../../components/Loader";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 const UserQuizManualPage = () => {
   const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState([
-    {
-      quizId: "1",
-      title: "Sample Quiz",
-      description: "This is a sample quiz for practice.",
-      numOfQuestions: 5,
-    },
-    {
-      quizId: "2",
-      title: "Another Sample Quiz",
-      description: "This is another sample quiz for practice.",
-      numOfQuestions: 10,
-    },
-  ]);
   const quizId = new URLSearchParams(window.location.search).get("quizId");
-  const quiz = quizzes.find((q) => q.quizId === quizId);
-
-  const startQuizHandler = (quizTitle, quizId) => {
-    navigate(`/questions/?quizId=${quizId}&quizTitle=${quizTitle}`);
-  };
+  const catId = new URLSearchParams(window.location.search).get("catId");
+  const [quiz, setQuiz] = useState(null);
 
   useEffect(() => {
-    if (!localStorage.getItem("jwtToken")) navigate("/");
-  }, []);
+    const fetchQuiz = async () => {
+      try {
+        if (!quizId || !catId) {
+          console.error("Quiz ID or Category ID is missing!");
+          return;
+        }
+
+        const quizDocRef = doc(db, `categories/${catId}/quizzes`, quizId);
+        const quizDocSnap = await getDoc(quizDocRef);
+        if (quizDocSnap.exists()) {
+          setQuiz({ id: quizDocSnap.id, ...quizDocSnap.data() });
+        } else {
+          console.error("Quiz not found!");
+        }
+      } catch (error) {
+        console.error("Error fetching quiz:", error);
+      }
+    };
+
+    fetchQuiz();
+  }, [quizId, catId]);
+
+  const startQuizHandler = () => {
+    navigate(`/questions?quizId=${quizId}&catId=${catId}`);
+  };
 
   return (
     <div className="quizManualPage__container">
@@ -95,7 +102,7 @@ const UserQuizManualPage = () => {
 
           <Button
             className="quizManualPage__content--button"
-            onClick={() => startQuizHandler(quiz.title, quiz.quizId)}
+            onClick={startQuizHandler}
             style={{
               border: "1px solid grey",
               margin: "2px 8px",
@@ -106,7 +113,7 @@ const UserQuizManualPage = () => {
           </Button>
         </div>
       ) : (
-        <Loader />
+        <p>Loading quiz details...</p>
       )}
     </div>
   );
