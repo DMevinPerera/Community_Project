@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Table, Form, Button, Modal } from "react-bootstrap";
 import { FaEdit } from "react-icons/fa";
 import Sidebar from "../../../components/Sidebar";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../config/firebase";
-import "./AdminStudentList.css"; 
+import "./AdminStudentList.css";
 
 const AdminStudentList = () => {
   const [students, setStudents] = useState([]);
@@ -16,10 +15,9 @@ const AdminStudentList = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const studentsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const studentsData = querySnapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((student) => student.status !== "rejected"); // Filter out rejected students
       setStudents(studentsData);
     };
     fetchStudents();
@@ -36,9 +34,7 @@ const AdminStudentList = () => {
   const handleReject = async (id) => {
     const studentRef = doc(db, "users", id);
     await updateDoc(studentRef, { status: "rejected" });
-    setStudents((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "rejected" } : s))
-    );
+    setStudents((prev) => prev.filter((s) => s.id !== id)); // Remove rejected students
   };
 
   const handleSaveChanges = async () => {
@@ -55,7 +51,6 @@ const AdminStudentList = () => {
       setStudents((prev) =>
         prev.map((s) => (s.id === selectedStudent.id ? selectedStudent : s))
       );
-
       setShowModal(false);
     }
   };
@@ -144,7 +139,7 @@ const AdminStudentList = () => {
         </Table>
       </div>
 
-      
+
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Edit Student</Modal.Title>
@@ -178,51 +173,6 @@ const AdminStudentList = () => {
                   }
                 />
               </Form.Group>
-              <Form.Group className="my-2">
-                <Form.Label>Grade</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={selectedStudent.grade}
-                  onChange={(e) =>
-                    setSelectedStudent({
-                      ...selectedStudent,
-                      grade: Number(e.target.value),
-                    })
-                  }
-                >
-                  {[...Array(13).keys()].map((i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Grade {i + 1}
-                    </option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-              <Form.Group className="my-2">
-                <Form.Label>Phone</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={selectedStudent.phoneNumber}
-                  onChange={(e) =>
-                    setSelectedStudent({
-                      ...selectedStudent,
-                      phoneNumber: e.target.value,
-                    })
-                  }
-                />
-              </Form.Group>
-              <Form.Group className="my-2">
-                <Form.Label>Admission Number</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={selectedStudent.admissionNumber}
-                  onChange={(e) =>
-                    setSelectedStudent({
-                      ...selectedStudent,
-                      admissionNumber: e.target.value,
-                    })
-                  }
-                />
-              </Form.Group>
             </Form>
           )}
         </Modal.Body>
@@ -240,3 +190,4 @@ const AdminStudentList = () => {
 };
 
 export default AdminStudentList;
+
