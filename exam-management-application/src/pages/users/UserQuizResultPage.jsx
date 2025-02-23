@@ -20,10 +20,10 @@ const UserQuizResultPage = () => {
           ...doc.data(),
         }));
 
-        // Sort results by timestamp in descending order
+        
         quizResultsData.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
-        // Add a serial number to each result
+        
         const resultsWithSerial = quizResultsData.map((result, index) => ({
           ...result,
           serialNumber: index + 1,

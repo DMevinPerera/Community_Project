@@ -14,7 +14,7 @@ const UserQuestionsPage = () => {
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState(null); // Timer in seconds
+  const [timeRemaining, setTimeRemaining] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -26,13 +26,13 @@ const UserQuestionsPage = () => {
           return;
         }
 
-        // Fetch quiz details
+        
         const quizDocRef = doc(db, `categories/${catId}/quizzes`, quizId);
         const quizDocSnap = await getDoc(quizDocRef);
         if (quizDocSnap.exists()) {
           setQuiz({ id: quizDocSnap.id, ...quizDocSnap.data() });
 
-          // Fetch questions
+          
           const questionsCollectionRef = collection(db, `categories/${catId}/quizzes/${quizId}/questions`);
           const questionsSnapshot = await getDocs(questionsCollectionRef);
           const questionsData = questionsSnapshot.docs.map((doc) => ({
@@ -41,7 +41,7 @@ const UserQuestionsPage = () => {
           }));
           setQuestions(questionsData);
 
-          // Set timer (90 seconds per question)
+          
           const totalSeconds = questionsData.length * 90;
           setTimeRemaining(totalSeconds);
         } else {
@@ -57,7 +57,7 @@ const UserQuestionsPage = () => {
     fetchQuizAndQuestions();
   }, [quizId, catId]);
 
-  // Timer logic
+ 
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;
 
@@ -67,7 +67,7 @@ const UserQuestionsPage = () => {
           return prev - 1;
         } else {
           clearInterval(timer);
-          submitQuizHandler(true); // Submit quiz when time runs out
+          submitQuizHandler(true); 
           return 0;
         }
       });
@@ -76,7 +76,7 @@ const UserQuestionsPage = () => {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // Handle user answers
+ 
   const handleAnswerChange = (questionId, selectedAnswer) => {
     setAnswers((prevAnswers) => ({
       ...prevAnswers,
@@ -84,14 +84,14 @@ const UserQuestionsPage = () => {
     }));
   };
 
-  // Submit quiz handler
+  
   const submitQuizHandler = async (isTimesUp = false) => {
-    if (isSubmitted) return; // Prevent multiple submissions
+    if (isSubmitted) return; 
 
     try {
       let obtainedMarks = 0;
 
-      // Calculate marks (2 marks per correct answer)
+      
       questions.forEach((question) => {
         if (answers[question.id] === question.correctAnswer) {
           obtainedMarks += 2;
@@ -101,19 +101,19 @@ const UserQuestionsPage = () => {
       const userId = auth.currentUser.uid;
       const totalMarks = questions.length * 2;
 
-      // Fetch category name
+      
       const categoryDocRef = doc(db, `categories`, catId);
       const categoryDocSnap = await getDoc(categoryDocRef);
       const categoryName = categoryDocSnap.exists() ? categoryDocSnap.data().title : "No Category";
 
-      // Store quiz attempt in Firestore
+      
       const quizAttempt = {
         userId,
         quizId,
         categoryId: catId,
         quizTitle: quiz.title,
-        categoryTitle: categoryName, // Store category name
-        obtainedMarks: isTimesUp ? 0 : obtainedMarks, // If time is up, marks are 0
+        categoryTitle: categoryName, 
+        obtainedMarks: isTimesUp ? 0 : obtainedMarks, 
         totalMarks,
         answers,
         timestamp: new Date(),
@@ -122,11 +122,11 @@ const UserQuestionsPage = () => {
       const attemptRef = doc(collection(db, `users/${userId}/marks`));
       await setDoc(attemptRef, quizAttempt);
 
-      // Navigate to the result page
+      
       if (!isTimesUp) {
         navigate(`/quizResults`);
       }
-      setIsSubmitted(true); // Mark quiz as submitted
+      setIsSubmitted(true); 
     } catch (error) {
       console.error("Error submitting quiz:", error);
       alert("Error submitting quiz. Please try again.");
@@ -141,7 +141,7 @@ const UserQuestionsPage = () => {
           <Button
             className="userQuestionsPage__content--button"
             onClick={() => submitQuizHandler()}
-            disabled={timeRemaining <= 0 || isSubmitted} // Disable button when time is up or quiz is submitted
+            disabled={timeRemaining <= 0 || isSubmitted} 
           >
             Submit Quiz
           </Button>
@@ -163,7 +163,7 @@ const UserQuestionsPage = () => {
               question={q}
               selectedAnswer={answers[q.id]}
               onAnswerChange={(selectedAnswer) => handleAnswerChange(q.id, selectedAnswer)}
-              disabled={timeRemaining <= 0 || isSubmitted} // Disable questions when time is up or quiz is submitted
+              disabled={timeRemaining <= 0 || isSubmitted} 
             />
           ))
         ) : (

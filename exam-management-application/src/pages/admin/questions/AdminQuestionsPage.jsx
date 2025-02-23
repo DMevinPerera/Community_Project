@@ -61,7 +61,7 @@ const AdminQuestionsPage = () => {
     );
   };
 
-  // Handle deletion of question
+
   const handleDeleteQuestion = (quesId) => {
     setQuestions((prevQuestions) =>
       prevQuestions.filter((q) => q.quesId !== quesId)
@@ -96,7 +96,7 @@ const AdminQuestionsPage = () => {
               quizId={quizId}
               categoryId={categoryId}
               isAdmin={true}
-              onDelete={handleDeleteQuestion} // Pass the delete handler
+              onDelete={handleDeleteQuestion} 
             />
           ))
         )}

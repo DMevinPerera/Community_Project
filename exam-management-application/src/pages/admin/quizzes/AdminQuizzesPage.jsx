@@ -11,10 +11,10 @@ const AdminQuizzesPage = () => {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(""); // Default: Show all
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Fetch categories & quizzes
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -56,7 +56,7 @@ const AdminQuizzesPage = () => {
       await deleteDoc(quizRef);
       alert(`${quiz.title} successfully deleted`);
 
-      // Remove from UI
+      
       setQuizzes((prevQuizzes) => prevQuizzes.filter(q => q.quizId !== quiz.quizId));
     } catch (e) {
       console.error("Error deleting quiz: ", e);
@@ -66,7 +66,7 @@ const AdminQuizzesPage = () => {
 
   const filteredQuizzes = selectedCategory
     ? quizzes.filter((quiz) => quiz.categoryId === selectedCategory)
-    : quizzes; // Show all if no category selected
+    : quizzes;
 
   return (
     <div className="adminQuizzesPage__container">
@@ -76,7 +76,7 @@ const AdminQuizzesPage = () => {
       <div className="adminQuizzesPage__content">
         <h2>Quizzes</h2>
 
-        {/* Category Filter */}
+      
         <Form.Select
           className="my-3"
           value={selectedCategory}

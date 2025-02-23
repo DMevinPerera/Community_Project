@@ -139,6 +139,7 @@ const AdminStudentList = () => {
         </Table>
       </div>
 
+
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Edit Student</Modal.Title>
