@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Form, Button, Table, Alert } from "react-bootstrap";
 import Sidebar from "../../../components/Sidebar";
 import "./AdminAttendenceMarking.css";
+import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
+import { db } from "../../../config/firebase"; // Import Firebase Firestore
+import emailjs from "emailjs-com"; // Import EmailJS
 
 const AdminAttendanceMarking = () => {
   const [selectedDate, setSelectedDate] = useState("");
@@ -33,22 +36,35 @@ const AdminAttendanceMarking = () => {
     fetchStudentsForGrade(grade);
   };
 
-  const fetchStudentsForGrade = (grade) => {
+  const fetchStudentsForGrade = async (grade) => {
     setLoading(true);
-    setTimeout(() => {
-      const mockStudents = [
-        { id: 1, name: "John Doe" },
-        { id: 2, name: "Jane Smith" },
-        { id: 3, name: "Alice Brown" },
-      ];
+    try {
+      const usersCollectionRef = collection(db, "users");
+      const q = query(usersCollectionRef, where("grade", "==", grade));
+      const querySnapshot = await getDocs(q);
+
+      const studentsData = [];
+      querySnapshot.forEach((doc) => {
+        const userData = doc.data();
+        studentsData.push({
+          id: doc.id,
+          name: `${userData.firstName} ${userData.lastName}`,
+          email: userData.email,
+        });
+      });
+
       const initialAttendance = {};
-      mockStudents.forEach((student) => {
+      studentsData.forEach((student) => {
         initialAttendance[student.id] = "Absent";
       });
-      setStudents(mockStudents);
+
+      setStudents(studentsData);
       setAttendanceRecords(initialAttendance);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleAttendanceChange = (studentId, status) => {
@@ -58,17 +74,63 @@ const AdminAttendanceMarking = () => {
     }));
   };
 
-  const handleSubmitAttendance = () => {
+  const sendEmail = async (email, name, date, status) => {
+    try {
+      // Replace these with your EmailJS credentials
+      const serviceID = "service_p9biarf"; // Replace with your EmailJS service ID
+      const templateID = "template_g5tyvc7"; // Replace with your EmailJS template ID
+      const userID = "oM80BG7ndTZKausBX"; // Replace with your EmailJS user ID
+
+      // Send email using EmailJS
+      await emailjs.send(
+        serviceID,
+        templateID,
+        {
+          to_email: email,
+          name: name,
+          date: date,
+          status: status,
+        },
+        userID
+      );
+
+      console.log(`Email sent to ${email}`);
+    } catch (error) {
+      console.error("Error sending email:", error);
+    }
+  };
+
+  const handleSubmitAttendance = async () => {
     const attendanceData = students.map((student) => ({
       studentId: student.id,
       name: student.name,
+      email: student.email,
       grade: selectedGrade,
       date: selectedDate,
       status: attendanceRecords[student.id] || "Absent",
     }));
-    console.log("Submitting Attendance:", attendanceData);
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 3000);
+
+    try {
+      // Update attendance in Firestore
+      for (const record of attendanceData) {
+        const userDocRef = doc(db, "users", record.studentId);
+        await updateDoc(userDocRef, {
+          attendance: {
+            [selectedDate]: record.status,
+          },
+        });
+      }
+
+      // Send emails to users
+      for (const record of attendanceData) {
+        await sendEmail(record.email, record.name, record.date, record.status);
+      }
+
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      console.error("Error submitting attendance:", error);
+    }
   };
 
   return (
