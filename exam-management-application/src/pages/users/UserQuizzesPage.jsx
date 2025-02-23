@@ -14,26 +14,26 @@ const UserQuizzesPage = () => {
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        // Fetch all categories
+        
         const categoriesSnapshot = await getDocs(collection(db, "categories"));
         const categoriesData = categoriesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        // Fetch quizzes from all categories
+        
         const allQuizzes = [];
         for (const category of categoriesData) {
           const quizzesCollectionRef = collection(db, `categories/${category.id}/quizzes`);
           const quizzesQuery = query(quizzesCollectionRef, where("isActive", "==", true));
           const quizzesSnapshot = await getDocs(quizzesQuery);
 
-          // Fetch questions for each quiz and calculate numOfQuestions
+          
           for (const quizDoc of quizzesSnapshot.docs) {
             const quizData = quizDoc.data();
             const questionsCollectionRef = collection(db, `categories/${category.id}/quizzes/${quizDoc.id}/questions`);
             const questionsSnapshot = await getDocs(questionsCollectionRef);
-            const numOfQuestions = questionsSnapshot.size; // Number of questions in the sub-collection
+            const numOfQuestions = questionsSnapshot.size; 
 
             allQuizzes.push({
               id: quizDoc.id,
@@ -41,7 +41,7 @@ const UserQuizzesPage = () => {
               categoryTitle: category.title,
               title: quizData.title || "No Title",
               description: quizData.description || "No Description",
-              numOfQuestions: numOfQuestions, // Dynamically calculated
+              numOfQuestions: numOfQuestions, 
               ...quizData,
             });
           }
@@ -102,7 +102,7 @@ const UserQuizzesPage = () => {
                         {`Start`}
                       </div>
 
-                      {/* Display total marks, number of questions, and time allocated */}
+                     
                       <div
                         className="userQuizzesPage__content--Button"
                         style={{ color: "black", backgroundColor: "white" }}

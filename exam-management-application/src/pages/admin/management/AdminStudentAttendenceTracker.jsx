@@ -12,7 +12,7 @@ const AdminStudentAttendenceTracker = () => {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const streamRef = useRef(null); // Add this to keep track of the media stream
+  const streamRef = useRef(null); 
 
   const handleGradeChange = (e) => {
     setSelectedGrade(e.target.value);
@@ -21,7 +21,7 @@ const AdminStudentAttendenceTracker = () => {
   const handleStartCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      streamRef.current = stream; // Store the stream reference
+      streamRef.current = stream; 
       setCameraActive(true);
 
       setTimeout(() => {
@@ -72,7 +72,7 @@ const AdminStudentAttendenceTracker = () => {
 
       const recognizedName = response.data.predicted_name;
 
-      // Check if the student is already in the attendance list
+      
       const isDuplicate = attendanceRecords.some((record) => record.name === recognizedName);
 
       if (isDuplicate) {

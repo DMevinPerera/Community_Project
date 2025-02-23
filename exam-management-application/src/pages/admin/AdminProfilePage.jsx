@@ -5,10 +5,10 @@ import "./AdminProfilePage.css";
 import Image from "react-bootstrap/Image";
 
 const AdminProfilePage = () => {
-  // Static user data, as no backend logic is used
+  
   const user = {
-    firstName: "E-TEC Official", // Example static data
-    lastName: "Admin",   // Example static data
+    firstName: "E-TEC Official", 
+    lastName: "Admin",   
     username: "EtecAdmin",
     phoneNumber: "+94372288899",
     roles: [{ roleName: "Admin" }],

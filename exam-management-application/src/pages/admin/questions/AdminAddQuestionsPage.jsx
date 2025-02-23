@@ -83,11 +83,11 @@ const AdminAddQuestionsPage = () => {
     }
 
     try {
-      // Get current questions count to set the next number
+      
+      
       const questionsRef = collection(db, "categories", categoryId, "quizzes", quizId, "questions");
       const snapshot = await getDocs(questionsRef);
-      const currentQuestionsCount = snapshot.docs.length; // Count of existing questions
-
+      const currentQuestionsCount = snapshot.docs.length; 
       const newQuestion = {
         content: content || null,
         image: imageUrl || null,
@@ -95,12 +95,12 @@ const AdminAddQuestionsPage = () => {
         answer,
       };
 
-      // Add new question
+     
       await addDoc(questionsRef, newQuestion);
 
       swal("Success", "Question added successfully!", "success");
 
-      // Clear form fields
+    
       setContent("");
       setImage(null);
       setImageUrl(null);
@@ -110,7 +110,7 @@ const AdminAddQuestionsPage = () => {
       setOption4("");
       setAnswer("");
 
-      // Navigate back to questions page
+      
       navigate(`/adminQuestions/?quizId=${quizId}&categoryId=${categoryId}`);
     } catch (error) {
       console.error("Error adding question to Firestore:", error);

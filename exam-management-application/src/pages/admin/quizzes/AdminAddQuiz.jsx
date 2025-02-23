@@ -55,13 +55,13 @@ const AdminAddQuiz = () => {
       };
   
       try {
-        // 🔥 Store quiz inside the selected category's `quizzes` sub-collection
+       
         const docRef = await addDoc(collection(db, "categories", selectedCategoryId, "quizzes"), quiz);
         
         console.log("Quiz Created with ID: ", docRef.id);
         alert("Quiz created successfully!");
   
-        // Clear form after submission
+       
         setTitle("");
         setDescription("");
         setIsActive(false);

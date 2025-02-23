@@ -25,8 +25,8 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [admissionNumber, setAdmissionNumber] = useState("");
   const [grade, setGrade] = useState("");
-  const [imageUrl, setImageUrl] = useState(""); // State to store Cloudinary image URL
-  const [capturedImages, setCapturedImages] = useState([]); // Array to store captured images
+  const [imageUrl, setImageUrl] = useState(""); 
+  const [capturedImages, setCapturedImages] = useState([]); 
   const [isCapturing, setIsCapturing] = useState(false);
 
   const cameraRef = useRef(null);
@@ -73,8 +73,8 @@ const RegisterPage = () => {
 
     const data = new FormData();
     data.append("file", file);
-    data.append("upload_preset", "smart-tuition"); // Replace with your Cloudinary upload preset
-    data.append("cloud_name", "dlbvyir2f"); // Replace with your Cloudinary cloud name
+    data.append("upload_preset", "smart-tuition");
+    data.append("cloud_name", "dlbvyir2f"); 
 
     try {
       setLoading(true);
@@ -88,8 +88,8 @@ const RegisterPage = () => {
       }
 
       const uploadedImage = await res.json();
-      setImageUrl(uploadedImage.secure_url); // Store the Cloudinary image URL
-      setPreview(uploadedImage.secure_url); // Set preview image
+      setImageUrl(uploadedImage.secure_url); 
+      setPreview(uploadedImage.secure_url);
       setLoading(false);
       swal("Success", "Image uploaded successfully!", "success");
     } catch (error) {
@@ -187,20 +187,20 @@ const RegisterPage = () => {
     setLoading(true);
   
     try {
-      // ✅ Firebase Authentication: Create User
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
   
-      // ✅ Firestore: Store User Data with UID as Document ID
-      await setDoc(doc(db, "users", user.uid), { // Use setDoc instead of addDoc
+     
+      await setDoc(doc(db, "users", user.uid), { 
         firstName,
         lastName,
         email,
         phoneNumber,
         admissionNumber,
         grade,
-        profilePic: imageUrl, // Store Cloudinary Image URL
-        status: "pending", // Default status
+        profilePic: imageUrl, 
+        status: "pending",
         createdAt: new Date(),
       });
       sendCapturedImagesToPythonBackend(capturedImages);
@@ -322,7 +322,7 @@ const RegisterPage = () => {
           />
         </Form.Group>
 
-         {/* Webcam Capture */}
+         
          <Form.Group className="my-3" controlId="webcamCapture">
           <Form.Label>Capture Face Images (100 images)</Form.Label>
           <div className="camera-container">
@@ -351,7 +351,7 @@ const RegisterPage = () => {
           </div>
         </Form.Group>
 
-        {/* Profile Picture Upload */}
+        
         <Form.Group className="my-3" controlId="profilePic">
           <Form.Label>Profile Picture</Form.Label>
           <Form.Control type="file" accept="image/*" onChange={handleImageUpload} />

@@ -3,12 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { Form, Button, Row, Col, InputGroup } from "react-bootstrap";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import FormContainer from "../components/FormContainer";
-import { signInWithEmailAndPassword } from "firebase/auth"; // Import Firebase Auth function
-import { auth, db } from "../config/firebase"; // Import auth and db
-import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../config/firebase"; 
+import { doc, getDoc } from "firebase/firestore"; 
 
 const LoginPage = () => {
-  const [email, setEmail] = useState(""); // Use email instead of username
+  const [email, setEmail] = useState(""); 
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordType, setPasswordType] = useState("password");
@@ -28,39 +28,39 @@ const LoginPage = () => {
   const submitHandler = async (e) => {
     e.preventDefault();
   
-    // Static admin credentials
+    
     const staticAdminEmail = "admin@gmail.com";
     const staticAdminPassword = "123456";
   
-    // Check if the entered credentials match the static admin credentials
+    
     if (email === staticAdminEmail && password === staticAdminPassword) {
-      navigate("/adminprofile"); // Redirect to admin profile
-      return; // Exit the function early
+      navigate("/adminprofile"); 
+      return;
     }
   
     try {
-      // Sign in with Firebase Authentication
+     
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
   
-      // Fetch user data from Firestore using the UID
-      const userDocRef = doc(db, "users", user.uid); // Use the user's UID
+     
+      const userDocRef = doc(db, "users", user.uid); 
       const userDocSnap = await getDoc(userDocRef);
   
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
   
-        // Check if the user is approved
+        
         if (userData.status === "approved") {
-          // Redirect based on user role or status
-          navigate("/profile"); // Redirect to user profile
+          
+          navigate("/profile");
         } else {
           setError("Your account is not approved yet. Please contact the admin.");
-          await auth.signOut(); // Log out the user if not approved
+          await auth.signOut();
         }
       } else {
         setError("User data not found! Please contact support.");
-        await auth.signOut(); // Log out the user if data is not found
+        await auth.signOut(); 
       }
     } catch (error) {
       console.error("Error logging in:", error);

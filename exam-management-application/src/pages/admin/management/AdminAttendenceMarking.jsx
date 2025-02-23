@@ -3,8 +3,8 @@ import { Form, Button, Table, Alert } from "react-bootstrap";
 import Sidebar from "../../../components/Sidebar";
 import "./AdminAttendenceMarking.css";
 import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
-import { db } from "../../../config/firebase"; // Import Firebase Firestore
-import emailjs from "emailjs-com"; // Import EmailJS
+import { db } from "../../../config/firebase"; 
+import emailjs from "emailjs-com"; 
 
 const AdminAttendanceMarking = () => {
   const [selectedDate, setSelectedDate] = useState("");
@@ -76,12 +76,12 @@ const AdminAttendanceMarking = () => {
 
   const sendEmail = async (email, name, date, status) => {
     try {
-      // Replace these with your EmailJS credentials
-      const serviceID = "service_p9biarf"; // Replace with your EmailJS service ID
-      const templateID = "template_g5tyvc7"; // Replace with your EmailJS template ID
-      const userID = "oM80BG7ndTZKausBX"; // Replace with your EmailJS user ID
+      
+      const serviceID = "service_p9biarf"; 
+      const templateID = "template_g5tyvc7"; 
+      const userID = "oM80BG7ndTZKausBX";
 
-      // Send email using EmailJS
+      
       await emailjs.send(
         serviceID,
         templateID,
@@ -111,7 +111,7 @@ const AdminAttendanceMarking = () => {
     }));
 
     try {
-      // Update attendance in Firestore
+     
       for (const record of attendanceData) {
         const userDocRef = doc(db, "users", record.studentId);
         await updateDoc(userDocRef, {
@@ -121,7 +121,7 @@ const AdminAttendanceMarking = () => {
         });
       }
 
-      // Send emails to users
+      
       for (const record of attendanceData) {
         await sendEmail(record.email, record.name, record.date, record.status);
       }

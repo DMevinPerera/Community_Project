@@ -144,7 +144,7 @@ const AdminStudentList = () => {
         </Table>
       </div>
 
-      {/* Edit Student Modal */}
+      
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Edit Student</Modal.Title>

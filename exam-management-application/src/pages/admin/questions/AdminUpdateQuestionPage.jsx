@@ -11,21 +11,20 @@ import "./AdminUpdateQuestionPage.css";
 
 const AdminUpdateQuestionPage = () => {
   const navigate = useNavigate();
-  const { categoryId, quizId, quesId } = useParams(); // Fetch all needed params
-  const location = useLocation(); // To handle query parameters
+  const { categoryId, quizId, quesId } = useParams(); 
+  const location = useLocation(); 
 
-  // Extract quizTitle from query parameters
   const queryParams = new URLSearchParams(location.search);
   const quizTitle = queryParams.get("quizTitle");
 
   const [content, setContent] = useState("");
-  const [image, setImage] = useState(null); // Store image file to upload
+  const [image, setImage] = useState(null); 
   const [option1, setOption1] = useState("");
   const [option2, setOption2] = useState("");
   const [option3, setOption3] = useState("");
   const [option4, setOption4] = useState("");
   const [answer, setAnswer] = useState("");
-  const [contentType, setContentType] = useState("text"); // Manage content type (text or image)
+  const [contentType, setContentType] = useState("text"); 
 
   useEffect(() => {
     if (!categoryId || !quizId || !quesId) {
@@ -41,7 +40,7 @@ const AdminUpdateQuestionPage = () => {
         if (docSnap.exists()) {
           const questionData = docSnap.data();
           setContent(questionData.content || "");
-          setImage(questionData.image || ""); // Set current image if it exists
+          setImage(questionData.image || ""); 
           setOption1(questionData.options?.option1 || "");
           setOption2(questionData.options?.option2 || "");
           setOption3(questionData.options?.option3 || "");
@@ -59,7 +58,7 @@ const AdminUpdateQuestionPage = () => {
   }, [categoryId, quizId, quesId]);
   
   const handleImageChange = (e) => {
-    setImage(e.target.files[0]); // Capture the selected image file
+    setImage(e.target.files[0]);
   };
 
   const uploadImage = async () => {
@@ -70,12 +69,12 @@ const AdminUpdateQuestionPage = () => {
       uploadTask.on(
         "state_changed",
         (snapshot) => {
-          // Optionally handle upload progress
+         
         },
         (error) => reject(error),
         async () => {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL); // Return the URL once upload is complete
+          resolve(downloadURL);
         }
       );
     });
@@ -90,12 +89,12 @@ const AdminUpdateQuestionPage = () => {
     }
   
     try {
-      let imageURL = image ? await uploadImage() : ""; // Upload image if selected
+      let imageURL = image ? await uploadImage() : ""; 
   
       const docRef = doc(db, "categories", categoryId, "quizzes", quizId, "questions", quesId);
       await updateDoc(docRef, {
         content,
-        image: imageURL || image, // Store image URL or previous image
+        image: imageURL || image, 
         options: {
           option1,
           option2,
